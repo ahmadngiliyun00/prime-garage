@@ -20,6 +20,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "user:password": "node --import tsx scripts/set-password.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

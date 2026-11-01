@@ -38,7 +38,7 @@ Versi di bawah adalah versi saat scaffold (1 November 2026). Upgrade versi minor
 | Form | State React + **zod** (skema dari `packages/shared`) lewat helper `src/lib/form.ts` | Pesan galat sama di client dan server |
 | 3D | **three.js** + **@react-three/fiber 9** (web dan native via `expo-gl`) + **@react-three/drei** (OrbitControls web) | Detail di `docs/3D-VIEWER.md` |
 | Realtime | **socket.io-client** | |
-| Login Google | Web: **Google Identity Services**; Android: **@react-native-google-signin/google-signin** | ID token dikirim ke API |
+| Login | Username dan password (form biasa). Google (nonaktif): Web **Google Identity Services**, Android **@react-native-google-signin/google-signin** | Lihat ADR-011 |
 | Penyimpanan token | **expo-secure-store** (native); web memakai cookie httpOnly | |
 | Push | **expo-notifications** | Android lewat FCM |
 | Build Android | **EAS Build** (`.aab`) dan **EAS Submit** | |
@@ -52,7 +52,7 @@ Versi di bawah adalah versi saat scaffold (1 November 2026). Upgrade versi minor
 | ORM dan migrasi | **Prisma 7** (provider `mysql`, driver adapter `@prisma/adapter-mariadb`) | Skema: `apps/api/prisma/schema.prisma`, konfigurasi: `apps/api/prisma7.config.ts` |
 | Database | **MySQL 8**, charset `utf8mb4`, collation `utf8mb4_unicode_ci` | |
 | Realtime | **Socket.IO** lewat NestJS WebSocket Gateway, path `/api/socket.io` | Room per garasi dan per pengguna |
-| Autentikasi | Verifikasi Google ID token (`google-auth-library`), lalu terbitkan **JWT** sendiri (`jose`) | Access token 15 menit, refresh token 30 hari dirotasi |
+| Autentikasi | Password di-hash dengan **scrypt** bawaan Node (`node:crypto`); Google ID token (`google-auth-library`) bila diaktifkan; lalu terbitkan **JWT** sendiri (`jose`) | Access token 15 menit, refresh token 30 hari dirotasi |
 | Validasi | **zod 4** (dari `packages/shared`) lewat `ZodValidationPipe` | |
 | Penjadwalan | **@nestjs/schedule** di proses worker terpisah | |
 | Email | **Nodemailer** (SMTP Google Workspace) | Template HTML sederhana |
@@ -114,11 +114,21 @@ prime-garage/
 
 ## 4. Alur penting
 
-### 4.1 Login Google
+### 4.1 Login
+**Username dan password (utama)**
+1. Pemilik membuat akun lewat CLI: `npm run user:password -w @prime-garage/api -- --username <nama> --email <email> --name "<Nama>"`. Password diminta dua kali lewat prompt tersembunyi (atau `PG_PASSWORD` untuk skrip). Perintah yang sama dipakai untuk reset password. Jika email sudah ada, username dan password ditambahkan ke akun itu.
+2. App mengirim `POST /api/auth/login { username, password }`; `username` boleh diisi email.
+3. API memverifikasi hash scrypt (`users.password_hash`, format `scrypt$N$r$p$salt$hash`) secara constant-time. Username yang tidak ada tetap diverifikasi terhadap hash palsu agar waktunya sama. Pesan galat selalu "Username atau password salah".
+4. Endpoint ini dibatasi 5 percobaan per menit per IP.
+
+**Google (nonaktif, untuk nanti)**
 1. Web memakai tombol Google Identity Services; Android memakai Google Sign-In native. Keduanya menghasilkan ID token dengan audience **client ID web**.
 2. App mengirim `POST /api/auth/google { idToken }`.
 3. API memverifikasi token dengan `google-auth-library` (audience harus ada di `GOOGLE_CLIENT_IDS`).
 4. API membuat/menemukan `users` dan `user_identities`, membuat garasi pribadi jika belum ada (FR-VEH-01).
+
+**Sesi (semua cara login)**
+
 5. API mengembalikan access token (JWT, 15 menit) dan refresh token (acak, disimpan sebagai hash SHA-256 di `refresh_tokens`).
    - Native (header `X-Client: native`): refresh token di body, disimpan di `expo-secure-store`.
    - Web: refresh token di cookie `pg_refresh` (`httpOnly; Secure; SameSite=Strict; Path=/api/auth`).
@@ -202,3 +212,9 @@ prime-garage/
 - **Status**: Diterima
 - **Konteks**: npm 10 gagal menyusun dependency tree proyek ini (bug `edgesOut` di resolver).
 - **Keputusan**: Gunakan npm 11 (`npx npm@11 install` atau pasang global `npm i -g npm@11`). Field `packageManager` dan `engines` di root mencatat versinya.
+
+### ADR-011: Login username dan password, Google ditunda
+- **Status**: Diterima (keputusan pemilik, 1 November 2026)
+- **Konteks**: Aplikasi untuk sementara dipakai pemilik sendiri. Login Google butuh OAuth client, SHA-1, dan development build, serta tidak bisa dipakai di Expo Go.
+- **Keputusan**: Login utama memakai username dan password. Hash memakai scrypt bawaan Node, jadi tidak ada dependency baru. Tidak ada pendaftaran publik: akun dibuat lewat CLI di server. Kode login Google tetap ada dan otomatis tersembunyi selama belum dikonfigurasi (FR-AUTH-09).
+- **Konsekuensi**: Pengguna baru hanya bisa ditambahkan oleh pemilik. Jika aplikasi dibuka untuk umum, perlu pendaftaran, verifikasi email, dan lupa password.

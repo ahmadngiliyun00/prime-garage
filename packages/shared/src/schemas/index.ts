@@ -33,6 +33,20 @@ export const googleLoginSchema = z.object({
 });
 export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
 
+/** Lowercase login name: letters, digits, dot, dash, underscore. */
+export const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9._-]{3,50}$/, 'Username 3 sampai 50 karakter: huruf, angka, titik, strip, atau garis bawah');
+
+export const passwordLoginSchema = z.object({
+  /** Username or email address. */
+  username: z.string().trim().toLowerCase().min(1, 'Username wajib diisi').max(191),
+  password: z.string().min(1, 'Password wajib diisi').max(200),
+});
+export type PasswordLoginInput = z.infer<typeof passwordLoginSchema>;
+
 export const devLoginSchema = z.object({
   email: z.email(),
   name: z.string().trim().min(1).max(120),

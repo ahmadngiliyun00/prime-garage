@@ -1,11 +1,11 @@
 // PrimeGarage database schema. Design doc: docs/DATABASE.md (keep both in sync).
 
 generator client {
-  provider             = "prisma-client"
-  output               = "../src/generated/prisma"
-  moduleFormat         = "esm"
-  importFileExtension  = "js"
-  runtime              = "nodejs"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+  runtime             = "nodejs"
 }
 
 datasource db {
@@ -136,17 +136,21 @@ enum DeliveryStatus {
 // ---------- Accounts and sessions ----------
 
 model User {
-  id          String    @id @default(uuid(7)) @db.Char(36)
-  email       String    @unique @db.VarChar(191)
-  name        String    @db.VarChar(120)
-  avatarUrl   String?   @map("avatar_url") @db.VarChar(500)
-  timezone    String    @default("Asia/Jakarta") @db.VarChar(64)
-  locale      String    @default("id") @db.VarChar(10)
-  notifyPush  Boolean   @default(true) @map("notify_push")
-  notifyEmail Boolean   @default(true) @map("notify_email")
-  lastLoginAt DateTime? @map("last_login_at") @db.DateTime(3)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  id           String    @id @default(uuid(7)) @db.Char(36)
+  email        String    @unique @db.VarChar(191)
+  /// Login name for username and password sign-in (lowercase). Null for accounts without a password.
+  username     String?   @unique @db.VarChar(50)
+  /// scrypt hash, format `scrypt$N$r$p$salt$hash` (base64url). Never returned by the API.
+  passwordHash String?   @map("password_hash") @db.VarChar(255)
+  name         String    @db.VarChar(120)
+  avatarUrl    String?   @map("avatar_url") @db.VarChar(500)
+  timezone     String    @default("Asia/Jakarta") @db.VarChar(64)
+  locale       String    @default("id") @db.VarChar(10)
+  notifyPush   Boolean   @default(true) @map("notify_push")
+  notifyEmail  Boolean   @default(true) @map("notify_email")
+  lastLoginAt  DateTime? @map("last_login_at") @db.DateTime(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
 
   identities       UserIdentity[]
   refreshTokens    RefreshToken[]
@@ -354,31 +358,31 @@ model MaintenanceRuleTemplate {
 // ---------- Vehicles ----------
 
 model Vehicle {
-  id                  String          @id @default(uuid(7)) @db.Char(36)
-  garageId            String          @map("garage_id") @db.Char(36)
-  vehicleModelId      Int?            @map("vehicle_model_id") @db.UnsignedInt
-  kind                VehicleKind
-  category            VehicleCategory
-  customBrand         String?         @map("custom_brand") @db.VarChar(64)
-  customModel         String?         @map("custom_model") @db.VarChar(100)
-  nickname            String          @db.VarChar(60)
-  plateNumber         String?         @map("plate_number") @db.VarChar(20)
-  year                Int?            @db.UnsignedSmallInt
-  color               String?         @db.VarChar(40)
-  engineCc            Int?            @map("engine_cc") @db.UnsignedSmallInt
-  frameNumber         String?         @map("frame_number") @db.VarChar(40)
-  engineNumber        String?         @map("engine_number") @db.VarChar(40)
-  purchaseDate        DateTime?       @map("purchase_date") @db.Date
-  initialOdometerKm   Int             @map("initial_odometer_km") @db.UnsignedInt
-  currentOdometerKm   Int             @map("current_odometer_km") @db.UnsignedInt
-  currentOdometerAt   DateTime        @map("current_odometer_at") @db.DateTime(3)
-  model3dKey          String          @map("model_3d_key") @db.VarChar(64)
-  photoAttachmentId   String?         @map("photo_attachment_id") @db.Char(36)
-  eduTourCompletedAt  DateTime?       @map("edu_tour_completed_at") @db.DateTime(3)
-  archivedAt          DateTime?       @map("archived_at") @db.DateTime(3)
-  createdById         String          @map("created_by") @db.Char(36)
-  createdAt           DateTime        @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt           DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+  id                 String          @id @default(uuid(7)) @db.Char(36)
+  garageId           String          @map("garage_id") @db.Char(36)
+  vehicleModelId     Int?            @map("vehicle_model_id") @db.UnsignedInt
+  kind               VehicleKind
+  category           VehicleCategory
+  customBrand        String?         @map("custom_brand") @db.VarChar(64)
+  customModel        String?         @map("custom_model") @db.VarChar(100)
+  nickname           String          @db.VarChar(60)
+  plateNumber        String?         @map("plate_number") @db.VarChar(20)
+  year               Int?            @db.UnsignedSmallInt
+  color              String?         @db.VarChar(40)
+  engineCc           Int?            @map("engine_cc") @db.UnsignedSmallInt
+  frameNumber        String?         @map("frame_number") @db.VarChar(40)
+  engineNumber       String?         @map("engine_number") @db.VarChar(40)
+  purchaseDate       DateTime?       @map("purchase_date") @db.Date
+  initialOdometerKm  Int             @map("initial_odometer_km") @db.UnsignedInt
+  currentOdometerKm  Int             @map("current_odometer_km") @db.UnsignedInt
+  currentOdometerAt  DateTime        @map("current_odometer_at") @db.DateTime(3)
+  model3dKey         String          @map("model_3d_key") @db.VarChar(64)
+  photoAttachmentId  String?         @map("photo_attachment_id") @db.Char(36)
+  eduTourCompletedAt DateTime?       @map("edu_tour_completed_at") @db.DateTime(3)
+  archivedAt         DateTime?       @map("archived_at") @db.DateTime(3)
+  createdById        String          @map("created_by") @db.Char(36)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
 
   garage         Garage                   @relation(fields: [garageId], references: [id], onDelete: Cascade)
   vehicleModel   VehicleModel?            @relation(fields: [vehicleModelId], references: [id], onDelete: SetNull)
@@ -545,9 +549,9 @@ model Notification {
   readAt    DateTime?        @map("read_at") @db.DateTime(3)
   createdAt DateTime         @default(now()) @map("created_at") @db.DateTime(3)
 
-  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vehicle    Vehicle?                 @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  rule       VehicleMaintenanceRule?  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle    Vehicle?                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  rule       VehicleMaintenanceRule? @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   deliveries NotificationDelivery[]
 
   @@index([userId, createdAt])

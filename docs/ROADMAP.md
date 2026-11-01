@@ -19,7 +19,8 @@ Status: ⬜ belum, 🟡 sebagian, ✅ selesai (kode ada dan teruji lokal), 🔑 
 ## Fase 2: API, login, dan kendaraan ✅
 - ✅ NestJS 12, Prisma 7 (MySQL), migrasi awal, seed katalog
 - ✅ Login Google (verifikasi ID token), JWT dan refresh token berotasi, logout, profil (FR-AUTH-01 s.d. 05)
-- 🔑 Buat OAuth client Google (web dan Android) lalu isi `GOOGLE_CLIENT_IDS` dan `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (lihat `DEPLOYMENT.md` 0.2)
+- ✅ Login username dan password, akun dibuat lewat CLI `user:password` (FR-AUTH-01, ADR-011)
+- ⏸️ Login Google ditunda (FR-AUTH-09); kode tetap ada. 🔑 Jika diaktifkan: buat OAuth client Google (web dan Android) lalu isi `GOOGLE_CLIENT_IDS` dan `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (lihat `DEPLOYMENT.md` 0.2)
 - ✅ Garasi otomatis, CRUD kendaraan dari katalog dan manual (FR-VEH-01 s.d. 05)
 - ✅ Odometer dengan penjaga angka turun (FR-VEH-06, 07)
 - ✅ Gateway Socket.IO dan invalidasi query di app, teruji antar dua klien sekitar 100 ms (FR-SYNC-01, 02)

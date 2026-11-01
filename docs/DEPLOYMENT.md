@@ -95,6 +95,12 @@ npm run db:seed
 
 Seed bersifat idempoten (aman dijalankan ulang saat katalog bertambah).
 
+3. Buat akun login pemilik (tidak ada pendaftaran publik, ADR-011). Password diminta dua kali lewat prompt tersembunyi; perintah yang sama dipakai untuk reset password:
+
+```bash
+npm run user:password -- --username ahmad --email ahmad@ngiliyun.my.id --name "Ahmad"
+```
+
 3. Backup: aaPanel > Cron > Backup database `prime_garage` setiap hari, simpan 14 hari. Backup juga folder `/www/prime-garage/storage`.
 
 ## 3. Build dan jalankan API serta worker (PM2)
@@ -258,6 +264,12 @@ npm run db:seed -w @prime-garage/api
 
 ```bash
 npm run dev:api
+```
+
+Buat akun login (password diminta lewat prompt, perintah yang sama untuk reset password):
+
+```bash
+npm run user:password -w @prime-garage/api -- --username ahmad --email ahmad@example.com --name "Ahmad"
 ```
 
 Di terminal lain:

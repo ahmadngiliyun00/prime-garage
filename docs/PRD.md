@@ -41,7 +41,7 @@ Istilah domain: **Vehicle Maintenance Tracking** (pencatatan riwayat servis) dan
 ## 5. Ruang lingkup
 
 ### 5.1 MVP (wajib ada)
-- Login dengan Google.
+- Login dengan username dan password (akun dibuat pemilik, tanpa pendaftaran publik).
 - Garasi pribadi dan pendaftaran kendaraan (motor) dari katalog merek/model.
 - Detail kendaraan dengan **model 3D interaktif**: sentuh bagian, muncul nama dan penjelasan.
 - Tur edukasi saat pertama kali membuka kendaraan.
@@ -70,7 +70,7 @@ Istilah domain: **Vehicle Maintenance Tracking** (pencatatan riwayat servis) dan
 
 ```
 Buka aplikasi
-  → Login (Google)
+  → Login (username dan password)
   → Garasi saya (kosong) → Tambah kendaraan
        → Pilih jenis (Motor) → Merek (Honda) → Model (Supra X 125) → Tahun
        → Isi: nama panggilan, plat nomor, warna, odometer saat ini
@@ -93,13 +93,14 @@ Prioritas: **M** = Must (MVP), **S** = Should (MVP jika sempat), **C** = Could (
 ### 7.1 Autentikasi dan akun (AUTH)
 | ID | Kebutuhan | Prioritas |
 |---|---|---|
-| FR-AUTH-01 | Pengguna login dengan akun Google (Android dan web). | M |
+| FR-AUTH-01 | Pengguna login dengan username (atau email) dan password di Android dan web. Akun dibuat atau direset pemilik lewat CLI, tidak ada pendaftaran publik (ADR-011). | M |
 | FR-AUTH-02 | Sesi bertahan (refresh token) sampai pengguna logout. | M |
 | FR-AUTH-03 | Pengguna dapat logout dari perangkat saat ini. | M |
 | FR-AUTH-04 | Pengguna dapat menghapus akun beserta seluruh datanya dari dalam aplikasi dan dari halaman web (syarat Google Play). | M |
 | FR-AUTH-05 | Profil: nama, foto, zona waktu, preferensi notifikasi (push, email). | M |
 | FR-AUTH-06 | Login Facebook. | C |
 | FR-AUTH-07 | Login Apple dan email. | C |
+| FR-AUTH-09 | Login Google. Kode sudah ada, nonaktif sampai `GOOGLE_CLIENT_IDS` dan `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` diisi (ADR-011). | C |
 
 ### 7.2 Garasi dan kendaraan (VEH)
 | ID | Kebutuhan | Prioritas |

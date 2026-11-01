@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, Redirect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
+import { passwordLoginSchema } from '@prime-garage/shared';
 import { Body, Button, Card, Field, Muted, Screen, Title } from '@/components/ui';
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton';
 import { errorMessage } from '@/lib/api';
@@ -14,6 +15,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('demo@primegarage.local');
   const [name, setName] = useState('Pengguna Demo');
   const [busy, setBusy] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
 
   const onIdToken = useCallback(
     async (idToken: string) => {
@@ -25,6 +29,23 @@ export default function LoginScreen() {
   const onError = useCallback((m: string) => setError(m), []);
 
   if (auth.status === 'signedIn') return <Redirect href="/" />;
+
+  const passwordLogin = async () => {
+    const parsed = passwordLoginSchema.safeParse({ username, password });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? 'Lengkapi username dan password');
+      return;
+    }
+    setSigningIn(true);
+    setError(null);
+    try {
+      await auth.signInWithPassword(parsed.data.username, parsed.data.password);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSigningIn(false);
+    }
+  };
 
   const devLogin = async () => {
     setBusy(true);
@@ -50,9 +71,33 @@ export default function LoginScreen() {
 
       <Card className="mt-8">
         <Body className="mb-4 text-center">Masuk untuk menyimpan riwayat servis dan menerima pengingat.</Body>
-        <GoogleSignInButton onIdToken={onIdToken} onError={onError} />
-        {!GOOGLE_WEB_CLIENT_ID ? (
-          <Muted className="text-center">Login Google belum dikonfigurasi (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).</Muted>
+        <Field
+          label="Username atau email"
+          value={username}
+          onChangeText={setUsername}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="username"
+          textContentType="username"
+          testID="login-username"
+        />
+        <Field
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="current-password"
+          textContentType="password"
+          onSubmitEditing={passwordLogin}
+          returnKeyType="go"
+          testID="login-password"
+        />
+        <Button title="Masuk" icon="log-in-outline" onPress={passwordLogin} loading={signingIn} testID="password-login" />
+        {GOOGLE_WEB_CLIENT_ID ? (
+          <View className="mt-3">
+            <GoogleSignInButton onIdToken={onIdToken} onError={onError} />
+          </View>
         ) : null}
         {error ? <Text className="mt-3 text-center text-sm text-red-600">{error}</Text> : null}
       </Card>

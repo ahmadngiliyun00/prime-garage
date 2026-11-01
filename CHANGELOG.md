@@ -4,11 +4,15 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 
 ## [Unreleased]
 
+### Ditambahkan
+- Login dengan username (atau email) dan password. Akun dibuat dan password direset lewat `npm run user:password -w @prime-garage/api` (FR-AUTH-01, ADR-011).
+
 ### Diperbaiki
 - Viewer 3D tidak lagi crash di iOS dan Android (`process.emitWarning is not a function`): Metro sekarang memakai build ESM `three.module.js`, bukan shim `three.cjs`.
 - Aplikasi tidak lagi crash di Expo Go karena modul native Google Sign-In tidak tersedia; tombol Google diganti pesan dan login pengembang tetap bisa dipakai.
 
 ### Diubah
+- Login Google ditunda dan tombolnya disembunyikan selama belum dikonfigurasi (FR-AUTH-09).
 - Jadwal pengingat harian ditulis langsung dalam WIB: `REMINDER_CRON=0 7 * * *` dengan `REMINDER_TZ=Asia/Jakarta` (UTC+7). Jam kirim tetap 07.00 WIB.
 
 ## [1.0.0] - 2026-11-01

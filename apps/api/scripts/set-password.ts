@@ -1,0 +1,92 @@
+/**
+ * Create a username and password account, or set a new password for an existing one.
+ * There is no public sign-up: this is how the owner gets an account (docs/DEPLOYMENT.md).
+ *
+ *   npm run user:password -w @prime-garage/api -- --username ahmad --email ahmad@example.com --name "Ahmad"
+ *
+ * The password is asked twice on a hidden prompt. For scripts, pass it in PG_PASSWORD instead.
+ * If --email matches an existing account (for example one created by GitHub login), the
+ * username and password are added to that account.
+ */
+import { parseArgs } from 'node:util';
+import { createInterface } from 'node:readline';
+import { usernameSchema } from '@prime-garage/shared';
+import { v7 as uuidv7 } from 'uuid';
+import { PrismaService } from '../src/prisma/prisma.service.js';
+import { ensurePersonalGarage } from '../src/modules/auth/accounts.js';
+import { hashPassword, PASSWORD_MIN_LENGTH } from '../src/modules/auth/password.js';
+
+function askHidden(question: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    const out = rl as unknown as { _writeToOutput: (s: string) => void; output: NodeJS.WriteStream };
+    let prompted = false;
+    out._writeToOutput = (s: string) => {
+      if (!prompted) {
+        out.output.write(s);
+        prompted = true;
+      }
+    };
+    rl.question(question, (answer) => {
+      rl.close();
+      process.stdout.write('\n');
+      resolve(answer);
+    });
+  });
+}
+
+async function readPassword(): Promise<string> {
+  const fromEnv = process.env['PG_PASSWORD'];
+  if (fromEnv) return fromEnv;
+  if (!process.stdin.isTTY) throw new Error('No terminal for the password prompt: set PG_PASSWORD');
+  const first = await askHidden('Password baru: ');
+  const second = await askHidden('Ulangi password: ');
+  if (first !== second) throw new Error('Password tidak sama');
+  return first;
+}
+
+async function main(): Promise<void> {
+  const { values } = parseArgs({
+    options: { username: { type: 'string' }, email: { type: 'string' }, name: { type: 'string' } },
+  });
+  const parsed = usernameSchema.safeParse(values.username ?? '');
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? 'Username tidak valid');
+  const username = parsed.data;
+  const email = values.email?.trim().toLowerCase();
+
+  const password = await readPassword();
+  if (password.length < PASSWORD_MIN_LENGTH) throw new Error(`Password minimal ${PASSWORD_MIN_LENGTH} karakter`);
+  const passwordHash = await hashPassword(password);
+
+  const prisma = new PrismaService();
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const byUsername = await tx.user.findUnique({ where: { username } });
+      if (byUsername) {
+        if (email && byUsername.email !== email) throw new Error(`Username ${username} sudah dipakai akun ${byUsername.email}`);
+        return { action: 'password diperbarui', user: await tx.user.update({ where: { id: byUsername.id }, data: { passwordHash } }) };
+      }
+      if (!email) throw new Error('Akun baru butuh --email');
+      const byEmail = await tx.user.findUnique({ where: { email } });
+      if (byEmail) {
+        return {
+          action: 'username dan password ditambahkan ke akun yang sudah ada',
+          user: await tx.user.update({ where: { id: byEmail.id }, data: { username, passwordHash } }),
+        };
+      }
+      const user = await tx.user.create({
+        data: { id: uuidv7(), email, username, passwordHash, name: (values.name ?? username).slice(0, 120) },
+      });
+      await ensurePersonalGarage(tx, user);
+      return { action: 'akun dibuat', user };
+    });
+    console.log(`OK: ${result.action} (${result.user.username} <${result.user.email}>)`);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+main().catch((e: unknown) => {
+  console.error(`Gagal: ${e instanceof Error ? e.message : String(e)}`);
+  process.exit(1);
+});

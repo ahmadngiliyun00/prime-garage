@@ -3,10 +3,12 @@ import { Throttle } from '@nestjs/throttler';
 import {
   devLoginSchema,
   googleLoginSchema,
+  passwordLoginSchema,
   refreshSchema,
   type AuthResponse,
   type DevLoginInput,
   type GoogleLoginInput,
+  type PasswordLoginInput,
   type RefreshInput,
 } from '@prime-garage/shared';
 import type { Request, Response } from 'express';
@@ -39,6 +41,7 @@ export class AuthController {
   @Get('config')
   config() {
     return {
+      passwordEnabled: true,
       googleEnabled: env.GOOGLE_CLIENT_IDS.length > 0,
       devLoginEnabled: env.AUTH_DEV_LOGIN_ENABLED && !isProduction,
     };
@@ -53,6 +56,20 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponse> {
     const { user, tokens } = await this.auth.loginWithGoogle(body.idToken, meta(req));
+    return this.respond(req, res, user, tokens);
+  }
+
+  @Public()
+  @Post('login')
+  @HttpCode(200)
+  // Stricter than the controller default: password guessing.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async login(
+    @Body(new ZodValidationPipe(passwordLoginSchema)) body: PasswordLoginInput,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponse> {
+    const { user, tokens } = await this.auth.loginWithPassword(body.username, body.password, meta(req));
     return this.respond(req, res, user, tokens);
   }
 

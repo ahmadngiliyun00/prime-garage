@@ -53,7 +53,9 @@ erDiagram
 | Kolom | Tipe | Catatan |
 |---|---|---|
 | id | CHAR(36) PK | UUID v7 |
-| email | VARCHAR(191) UNIQUE | Dari penyedia identitas |
+| email | VARCHAR(191) UNIQUE | Dari penyedia identitas atau CLI |
+| username | VARCHAR(50) NULL UNIQUE | Huruf kecil, untuk login password |
+| password_hash | VARCHAR(255) NULL | Hash scrypt `scrypt$N$r$p$salt$hash`, tidak pernah dikirim ke klien. NULL berarti akun tanpa password |
 | name | VARCHAR(120) | |
 | avatar_url | VARCHAR(500) NULL | |
 | timezone | VARCHAR(64) | Default `Asia/Jakarta` |

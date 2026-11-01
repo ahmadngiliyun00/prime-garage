@@ -4,6 +4,8 @@ import { v7 as uuidv7 } from 'uuid';
 import { env, isProduction } from '../../config/env.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { IdentityProvider, User } from '../../generated/prisma/client.js';
+import { ensurePersonalGarage } from './accounts.js';
+import { getDummyHash, verifyPassword } from './password.js';
 import { TokenService, type IssuedTokens } from './token.service.js';
 
 type Profile = { provider: IdentityProvider; providerUserId: string; email: string; name: string; avatarUrl: string | null };
@@ -41,6 +43,24 @@ export class AuthService {
       avatarUrl: payload.picture ?? null,
     });
     return { user, tokens: await this.tokens.issue({ id: user.id, email: user.email }, meta) };
+  }
+
+  /**
+   * Username (or email) and password sign-in. Accounts are created with the CLI
+   * (`npm run user:password -w @prime-garage/api`), there is no public sign-up.
+   */
+  async loginWithPassword(identifier: string, password: string, meta: { userAgent?: string; ip?: string }) {
+    const id = identifier.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({ where: id.includes('@') ? { email: id } : { username: id } });
+    const ok = await verifyPassword(password, user?.passwordHash ?? (await getDummyHash()));
+    if (!user?.passwordHash || !ok) throw new UnauthorizedException('Username atau password salah');
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+      await ensurePersonalGarage(tx, u);
+      return u;
+    });
+    return { user: updated, tokens: await this.tokens.issue({ id: updated.id, email: updated.email }, meta) };
   }
 
   /** Development-only login without Google (AUTH_DEV_LOGIN_ENABLED=true, never in production). */
@@ -86,17 +106,7 @@ export class AuthService {
         });
       }
 
-      const hasGarage = await tx.garageMember.findFirst({ where: { userId: user.id, role: 'owner' } });
-      if (!hasGarage) {
-        await tx.garage.create({
-          data: {
-            id: uuidv7(),
-            ownerId: user.id,
-            name: `Garasi ${user.name.split(' ')[0] ?? user.name}`.slice(0, 100),
-            members: { create: { userId: user.id, role: 'owner' } },
-          },
-        });
-      }
+      await ensurePersonalGarage(tx, user);
       return user;
     });
   }

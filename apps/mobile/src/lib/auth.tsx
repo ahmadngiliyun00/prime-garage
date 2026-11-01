@@ -9,6 +9,7 @@ type AuthState =
   | { status: 'signedIn'; user: UserDto };
 
 type AuthContextValue = AuthState & {
+  signInWithPassword: (username: string, password: string) => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
   devLogin: (email: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -29,6 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!session) setState({ status: 'signedOut', user: null });
     });
     return off;
+  }, []);
+
+  const signInWithPassword = useCallback(async (username: string, password: string) => {
+    await applySession(await http.post<AuthResponse>('/auth/login', { username, password }));
   }, []);
 
   const signInWithGoogle = useCallback(async (idToken: string) => {
@@ -53,8 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setUser = useCallback((user: UserDto) => setState({ status: 'signedIn', user }), []);
 
   const value = useMemo(
-    () => ({ ...state, signInWithGoogle, devLogin, signOut, setUser }),
-    [state, signInWithGoogle, devLogin, signOut, setUser],
+    () => ({ ...state, signInWithPassword, signInWithGoogle, devLogin, signOut, setUser }),
+    [state, signInWithPassword, signInWithGoogle, devLogin, signOut, setUser],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
