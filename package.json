@@ -20,6 +20,7 @@
     "dev:api": "npm run start:dev -w @prime-garage/api",
     "dev:worker": "npm run start:worker:dev -w @prime-garage/api",
     "dev:mobile": "npm run start -w @prime-garage/mobile",
+    "dev:web": "npm run web -w @prime-garage/mobile",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

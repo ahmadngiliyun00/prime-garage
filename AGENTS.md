@@ -55,7 +55,8 @@ Jika perubahan memang perlu: tulis usulan ADR baru di `docs/ARCHITECTURE.md` (st
 |---|---|
 | `npx npm@11 install` | Pasang dependency dan bangun `packages/shared` |
 | `npm run lint`, `npm run typecheck`, `npm test` | Wajib lulus sebelum commit |
-| `npm run dev:api`, `npm run dev:mobile` | Development |
+| `npm run dev:api`, `npm run dev:mobile`, `npm run dev:web` | Development (web saja: `dev:web`, buka `http://localhost:8081`) |
+| `npm run user:password -w @prime-garage/api -- --username <u> --email <e>` | Buat akun atau reset password |
 | `node apps/api/scripts/smoke-test.mjs` | Tes end-to-end API (API berjalan, dev login aktif) |
 | `npm run generate:model` | Bangun ulang `underbone_v1.glb` |
 

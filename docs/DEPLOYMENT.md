@@ -288,6 +288,12 @@ Di terminal lain:
 npm run dev:mobile
 ```
 
+Atau versi web saja, lalu buka `http://localhost:8081`:
+
+```bash
+npm run dev:web
+```
+
 Tes end-to-end API (API harus berjalan dengan dev login aktif), dari `apps/api`:
 
 ```bash

@@ -58,6 +58,18 @@ npm run dev:api
 npm run dev:mobile
 ```
 
+Versi web saja (membuka `http://localhost:8081` di browser):
+
+```bash
+npm run dev:web
+```
+
+Buat akun login (password diminta lewat prompt):
+
+```bash
+npm run user:password -w @prime-garage/api -- --username ahmad --email ahmad@example.com --name "Ahmad"
+```
+
 ## Struktur
 
 | Folder | Isi |
