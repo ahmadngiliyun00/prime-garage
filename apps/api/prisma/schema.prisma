@@ -1,0 +1,572 @@
+// PrimeGarage database schema. Design doc: docs/DATABASE.md (keep both in sync).
+
+generator client {
+  provider             = "prisma-client"
+  output               = "../src/generated/prisma"
+  moduleFormat         = "esm"
+  importFileExtension  = "js"
+  runtime              = "nodejs"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ---------- Enums ----------
+
+enum IdentityProvider {
+  google
+  facebook
+  apple
+  email
+}
+
+enum PushPlatform {
+  android
+  ios
+  web
+}
+
+enum GarageRole {
+  owner
+  editor
+  viewer
+}
+
+enum VehicleKind {
+  motorcycle
+  car
+}
+
+enum VehicleCategory {
+  underbone
+  scooter
+  sport
+  trail
+  car_hatchback
+  car_sedan
+  car_mpv
+  car_suv
+  other
+}
+
+enum FuelSystem {
+  carburetor
+  injection
+}
+
+enum Transmission {
+  manual
+  semi_automatic
+  automatic
+}
+
+enum FinalDrive {
+  chain
+  belt
+  shaft
+}
+
+enum PartGroup {
+  engine
+  fuel
+  drivetrain
+  brake
+  electrical
+  suspension
+  wheel
+  body
+  fluid
+}
+
+enum ServiceAction {
+  replace
+  top_up
+  inspect
+  adjust
+  clean
+  lubricate
+  repair
+  other
+}
+
+enum OdometerSource {
+  initial
+  manual
+  service
+}
+
+enum WorkshopType {
+  official
+  general
+  self
+  other
+}
+
+enum WorkshopCertification {
+  certified
+  not_certified
+  unknown
+}
+
+enum AttachmentOwnerType {
+  service_record
+  vehicle
+}
+
+enum NotificationType {
+  component_soon
+  component_due
+  odometer_stale
+  system
+}
+
+enum DeliveryChannel {
+  push
+  email
+}
+
+enum DeliveryStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+// ---------- Accounts and sessions ----------
+
+model User {
+  id          String    @id @default(uuid(7)) @db.Char(36)
+  email       String    @unique @db.VarChar(191)
+  name        String    @db.VarChar(120)
+  avatarUrl   String?   @map("avatar_url") @db.VarChar(500)
+  timezone    String    @default("Asia/Jakarta") @db.VarChar(64)
+  locale      String    @default("id") @db.VarChar(10)
+  notifyPush  Boolean   @default(true) @map("notify_push")
+  notifyEmail Boolean   @default(true) @map("notify_email")
+  lastLoginAt DateTime? @map("last_login_at") @db.DateTime(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+
+  identities       UserIdentity[]
+  refreshTokens    RefreshToken[]
+  pushTokens       PushToken[]
+  ownedGarages     Garage[]        @relation("GarageOwner")
+  memberships      GarageMember[]
+  notifications    Notification[]
+  vehiclesCreated  Vehicle[]       @relation("VehicleCreatedBy")
+  odometerCreated  OdometerLog[]   @relation("OdometerCreatedBy")
+  workshopsCreated Workshop[]      @relation("WorkshopCreatedBy")
+  servicesCreated  ServiceRecord[] @relation("ServiceCreatedBy")
+  attachments      Attachment[]    @relation("AttachmentCreatedBy")
+
+  @@map("users")
+}
+
+model UserIdentity {
+  id             String           @id @default(uuid(7)) @db.Char(36)
+  userId         String           @map("user_id") @db.Char(36)
+  provider       IdentityProvider
+  providerUserId String           @map("provider_user_id") @db.VarChar(191)
+  email          String?          @db.VarChar(191)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("user_identities")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid(7)) @db.Char(36)
+  userId       String    @map("user_id") @db.Char(36)
+  familyId     String    @map("family_id") @db.Char(36)
+  tokenHash    String    @unique @map("token_hash") @db.Char(64)
+  expiresAt    DateTime  @map("expires_at") @db.DateTime(3)
+  revokedAt    DateTime? @map("revoked_at") @db.DateTime(3)
+  replacedById String?   @map("replaced_by_id") @db.Char(36)
+  userAgent    String?   @map("user_agent") @db.VarChar(255)
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model PushToken {
+  id         String       @id @default(uuid(7)) @db.Char(36)
+  userId     String       @map("user_id") @db.Char(36)
+  token      String       @unique @db.VarChar(255)
+  platform   PushPlatform
+  deviceName String?      @map("device_name") @db.VarChar(120)
+  lastSeenAt DateTime     @default(now()) @map("last_seen_at") @db.DateTime(3)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_tokens")
+}
+
+// ---------- Garages ----------
+
+model Garage {
+  id        String   @id @default(uuid(7)) @db.Char(36)
+  ownerId   String   @map("owner_id") @db.Char(36)
+  name      String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  owner       User           @relation("GarageOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     GarageMember[]
+  vehicles    Vehicle[]
+  workshops   Workshop[]
+  attachments Attachment[]
+
+  @@index([ownerId])
+  @@map("garages")
+}
+
+model GarageMember {
+  garageId  String     @map("garage_id") @db.Char(36)
+  userId    String     @map("user_id") @db.Char(36)
+  role      GarageRole
+  createdAt DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+
+  garage Garage @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([garageId, userId])
+  @@index([userId])
+  @@map("garage_members")
+}
+
+// ---------- Catalog ----------
+
+model Brand {
+  id     Int            @id @default(autoincrement()) @db.UnsignedInt
+  slug   String         @unique @db.VarChar(64)
+  name   String         @db.VarChar(64)
+  models VehicleModel[]
+
+  @@map("brands")
+}
+
+model Model3dAsset {
+  key         String          @id @db.VarChar(64)
+  category    VehicleCategory
+  filePath    String          @map("file_path") @db.VarChar(255)
+  version     Int             @default(1) @db.UnsignedSmallInt
+  licenseNote String          @map("license_note") @db.VarChar(500)
+  isActive    Boolean         @default(true) @map("is_active")
+
+  vehicleModels VehicleModel[]
+  vehicles      Vehicle[]
+  partViews     Model3dPartView[]
+
+  @@map("model_3d_assets")
+}
+
+model VehicleModel {
+  id           Int             @id @default(autoincrement()) @db.UnsignedInt
+  brandId      Int             @map("brand_id") @db.UnsignedInt
+  name         String          @db.VarChar(100)
+  slug         String          @unique @db.VarChar(120)
+  kind         VehicleKind
+  category     VehicleCategory
+  engineCc     Int?            @map("engine_cc") @db.UnsignedSmallInt
+  fuelSystem   FuelSystem?     @map("fuel_system")
+  transmission Transmission?
+  finalDrive   FinalDrive?     @map("final_drive")
+  yearStart    Int?            @map("year_start") @db.UnsignedSmallInt
+  yearEnd      Int?            @map("year_end") @db.UnsignedSmallInt
+  model3dKey   String          @map("model_3d_key") @db.VarChar(64)
+  specs        Json?
+  isActive     Boolean         @default(true) @map("is_active")
+
+  brand         Brand                     @relation(fields: [brandId], references: [id])
+  model3d       Model3dAsset              @relation(fields: [model3dKey], references: [key])
+  vehicles      Vehicle[]
+  ruleTemplates MaintenanceRuleTemplate[]
+
+  @@index([brandId])
+  @@map("vehicle_models")
+}
+
+model Part {
+  code         String    @id @db.VarChar(64)
+  name         String    @db.VarChar(100)
+  nameEn       String    @map("name_en") @db.VarChar(100)
+  partGroup    PartGroup @map("group")
+  appliesTo    Json      @map("applies_to")
+  summary      String    @db.VarChar(255)
+  functionText String    @map("function_text") @db.Text
+  symptomsText String    @map("symptoms_text") @db.Text
+  careTipsText String    @map("care_tips_text") @db.Text
+  tourOrder    Int?      @map("tour_order") @db.SmallInt
+  sortOrder    Int       @default(0) @map("sort_order") @db.SmallInt
+
+  partViews     Model3dPartView[]
+  ruleTemplates MaintenanceRuleTemplate[]
+  vehicleRules  VehicleMaintenanceRule[]
+  serviceItems  ServiceItem[]
+
+  @@map("parts")
+}
+
+model Model3dPartView {
+  model3dKey     String @map("model_3d_key") @db.VarChar(64)
+  partCode       String @map("part_code") @db.VarChar(64)
+  cameraPosition Json   @map("camera_position")
+  cameraTarget   Json   @map("camera_target")
+  labelAnchor    Json?  @map("label_anchor")
+
+  model3d Model3dAsset @relation(fields: [model3dKey], references: [key], onDelete: Cascade)
+  part    Part         @relation(fields: [partCode], references: [code], onDelete: Cascade)
+
+  @@id([model3dKey, partCode])
+  @@map("model_3d_part_views")
+}
+
+model MaintenanceRuleTemplate {
+  id             Int              @id @default(autoincrement()) @db.UnsignedInt
+  partCode       String           @map("part_code") @db.VarChar(64)
+  action         ServiceAction
+  category       VehicleCategory?
+  vehicleModelId Int?             @map("vehicle_model_id") @db.UnsignedInt
+  intervalKm     Int?             @map("interval_km") @db.UnsignedInt
+  intervalMonths Int?             @map("interval_months") @db.UnsignedSmallInt
+  resetActions   Json             @map("reset_actions")
+  sourceNote     String           @map("source_note") @db.VarChar(255)
+
+  part         Part          @relation(fields: [partCode], references: [code])
+  vehicleModel VehicleModel? @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+
+  @@index([partCode])
+  @@index([category])
+  @@map("maintenance_rule_templates")
+}
+
+// ---------- Vehicles ----------
+
+model Vehicle {
+  id                  String          @id @default(uuid(7)) @db.Char(36)
+  garageId            String          @map("garage_id") @db.Char(36)
+  vehicleModelId      Int?            @map("vehicle_model_id") @db.UnsignedInt
+  kind                VehicleKind
+  category            VehicleCategory
+  customBrand         String?         @map("custom_brand") @db.VarChar(64)
+  customModel         String?         @map("custom_model") @db.VarChar(100)
+  nickname            String          @db.VarChar(60)
+  plateNumber         String?         @map("plate_number") @db.VarChar(20)
+  year                Int?            @db.UnsignedSmallInt
+  color               String?         @db.VarChar(40)
+  engineCc            Int?            @map("engine_cc") @db.UnsignedSmallInt
+  frameNumber         String?         @map("frame_number") @db.VarChar(40)
+  engineNumber        String?         @map("engine_number") @db.VarChar(40)
+  purchaseDate        DateTime?       @map("purchase_date") @db.Date
+  initialOdometerKm   Int             @map("initial_odometer_km") @db.UnsignedInt
+  currentOdometerKm   Int             @map("current_odometer_km") @db.UnsignedInt
+  currentOdometerAt   DateTime        @map("current_odometer_at") @db.DateTime(3)
+  model3dKey          String          @map("model_3d_key") @db.VarChar(64)
+  photoAttachmentId   String?         @map("photo_attachment_id") @db.Char(36)
+  eduTourCompletedAt  DateTime?       @map("edu_tour_completed_at") @db.DateTime(3)
+  archivedAt          DateTime?       @map("archived_at") @db.DateTime(3)
+  createdById         String          @map("created_by") @db.Char(36)
+  createdAt           DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+
+  garage         Garage                   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  vehicleModel   VehicleModel?            @relation(fields: [vehicleModelId], references: [id], onDelete: SetNull)
+  model3d        Model3dAsset             @relation(fields: [model3dKey], references: [key])
+  createdBy      User                     @relation("VehicleCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  rules          VehicleMaintenanceRule[]
+  odometerLogs   OdometerLog[]
+  serviceRecords ServiceRecord[]
+  notifications  Notification[]
+
+  @@index([garageId, archivedAt])
+  @@map("vehicles")
+}
+
+model VehicleMaintenanceRule {
+  id             String        @id @default(uuid(7)) @db.Char(36)
+  vehicleId      String        @map("vehicle_id") @db.Char(36)
+  partCode       String        @map("part_code") @db.VarChar(64)
+  action         ServiceAction
+  intervalKm     Int?          @map("interval_km") @db.UnsignedInt
+  intervalMonths Int?          @map("interval_months") @db.UnsignedSmallInt
+  resetActions   Json          @map("reset_actions")
+  isEnabled      Boolean       @default(true) @map("is_enabled")
+  templateId     Int?          @map("template_id") @db.UnsignedInt
+  isCustomized   Boolean       @default(false) @map("is_customized")
+  snoozedUntil   DateTime?     @map("snoozed_until") @db.Date
+  createdAt      DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+
+  vehicle       Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  part          Part           @relation(fields: [partCode], references: [code])
+  notifications Notification[]
+
+  @@unique([vehicleId, partCode, action])
+  @@map("vehicle_maintenance_rules")
+}
+
+model OdometerLog {
+  id              String         @id @default(uuid(7)) @db.Char(36)
+  vehicleId       String         @map("vehicle_id") @db.Char(36)
+  km              Int            @db.UnsignedInt
+  recordedAt      DateTime       @map("recorded_at") @db.DateTime(3)
+  source          OdometerSource
+  serviceRecordId String?        @unique @map("service_record_id") @db.Char(36)
+  note            String?        @db.VarChar(255)
+  createdById     String         @map("created_by") @db.Char(36)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+
+  vehicle       Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  serviceRecord ServiceRecord? @relation(fields: [serviceRecordId], references: [id], onDelete: Cascade)
+  createdBy     User           @relation("OdometerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, recordedAt])
+  @@map("odometer_logs")
+}
+
+// ---------- Workshops and services ----------
+
+model Workshop {
+  id                String                @id @default(uuid(7)) @db.Char(36)
+  garageId          String                @map("garage_id") @db.Char(36)
+  name              String                @db.VarChar(120)
+  type              WorkshopType          @default(general)
+  certification     WorkshopCertification @default(unknown)
+  certificationNote String?               @map("certification_note") @db.VarChar(255)
+  address           String?               @db.VarChar(255)
+  city              String?               @db.VarChar(100)
+  phone             String?               @db.VarChar(30)
+  latitude          Decimal?              @db.Decimal(9, 6)
+  longitude         Decimal?              @db.Decimal(9, 6)
+  notes             String?               @db.Text
+  createdById       String                @map("created_by") @db.Char(36)
+  createdAt         DateTime              @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime              @updatedAt @map("updated_at") @db.DateTime(3)
+
+  garage         Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  createdBy      User            @relation("WorkshopCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  serviceRecords ServiceRecord[]
+
+  @@index([garageId])
+  @@map("workshops")
+}
+
+model ServiceRecord {
+  id           String   @id @default(uuid(7)) @db.Char(36)
+  vehicleId    String   @map("vehicle_id") @db.Char(36)
+  workshopId   String?  @map("workshop_id") @db.Char(36)
+  serviceDate  DateTime @map("service_date") @db.Date
+  odometerKm   Int      @map("odometer_km") @db.UnsignedInt
+  mechanicName String?  @map("mechanic_name") @db.VarChar(100)
+  laborCost    Decimal? @map("labor_cost") @db.Decimal(12, 2)
+  totalCost    Decimal  @map("total_cost") @db.Decimal(12, 2)
+  notes        String?  @db.Text
+  createdById  String   @map("created_by") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  vehicle     Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  workshop    Workshop?     @relation(fields: [workshopId], references: [id], onDelete: SetNull)
+  createdBy   User          @relation("ServiceCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  items       ServiceItem[]
+  odometerLog OdometerLog?
+
+  @@index([vehicleId, serviceDate])
+  @@index([workshopId])
+  @@map("service_records")
+}
+
+model ServiceItem {
+  id              String        @id @default(uuid(7)) @db.Char(36)
+  serviceRecordId String        @map("service_record_id") @db.Char(36)
+  partCode        String?       @map("part_code") @db.VarChar(64)
+  customPartName  String?       @map("custom_part_name") @db.VarChar(100)
+  action          ServiceAction
+  productName     String?       @map("product_name") @db.VarChar(120)
+  quantity        Decimal?      @db.Decimal(10, 2)
+  unit            String?       @db.VarChar(20)
+  unitPrice       Decimal?      @map("unit_price") @db.Decimal(12, 2)
+  subtotal        Decimal?      @db.Decimal(12, 2)
+  notes           String?       @db.VarChar(255)
+  sortOrder       Int           @default(0) @map("sort_order") @db.SmallInt
+
+  serviceRecord ServiceRecord @relation(fields: [serviceRecordId], references: [id], onDelete: Cascade)
+  part          Part?         @relation(fields: [partCode], references: [code])
+
+  @@index([partCode])
+  @@index([serviceRecordId])
+  @@map("service_items")
+}
+
+model Attachment {
+  id          String              @id @default(uuid(7)) @db.Char(36)
+  garageId    String              @map("garage_id") @db.Char(36)
+  ownerType   AttachmentOwnerType @map("owner_type")
+  ownerId     String              @map("owner_id") @db.Char(36)
+  filePath    String              @map("file_path") @db.VarChar(255)
+  mimeType    String              @map("mime_type") @db.VarChar(50)
+  sizeBytes   Int                 @map("size_bytes") @db.UnsignedInt
+  width       Int?                @db.UnsignedSmallInt
+  height      Int?                @db.UnsignedSmallInt
+  createdById String              @map("created_by") @db.Char(36)
+  createdAt   DateTime            @default(now()) @map("created_at") @db.DateTime(3)
+
+  garage    Garage @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  createdBy User   @relation("AttachmentCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([ownerType, ownerId])
+  @@index([garageId])
+  @@map("attachments")
+}
+
+// ---------- Notifications ----------
+
+model Notification {
+  id        String           @id @default(uuid(7)) @db.Char(36)
+  userId    String           @map("user_id") @db.Char(36)
+  vehicleId String?          @map("vehicle_id") @db.Char(36)
+  ruleId    String?          @map("rule_id") @db.Char(36)
+  type      NotificationType
+  title     String           @db.VarChar(150)
+  body      String           @db.VarChar(500)
+  data      Json?
+  dedupeKey String           @unique @map("dedupe_key") @db.VarChar(191)
+  readAt    DateTime?        @map("read_at") @db.DateTime(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle    Vehicle?                 @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  rule       VehicleMaintenanceRule?  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id             String          @id @default(uuid(7)) @db.Char(36)
+  notificationId String          @map("notification_id") @db.Char(36)
+  channel        DeliveryChannel
+  status         DeliveryStatus  @default(pending)
+  attempts       Int             @default(0) @db.UnsignedTinyInt
+  error          String?         @db.VarChar(500)
+  sentAt         DateTime?       @map("sent_at") @db.DateTime(3)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status])
+  @@map("notification_deliveries")
+}

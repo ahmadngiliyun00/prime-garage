@@ -25,5 +25,10 @@
     "test": "npm run test --workspaces --if-present",
     "generate:model": "npm run generate:model -w @prime-garage/mobile"
   },
-  "packageManager": "npm@11.21.1"
+  "packageManager": "npm@11.21.1",
+  "allowScripts": {
+    "@prisma/engines@7.10.1": true,
+    "prisma@7.10.1": true,
+    "esbuild@0.28.2": true
+  }
 }
