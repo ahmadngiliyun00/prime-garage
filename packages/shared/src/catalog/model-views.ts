@@ -19,6 +19,8 @@ export type Model3dAsset = {
   filePath: string;
   version: number;
   licenseNote: string;
+  /** Credit line shown in the viewer when the license requires attribution (CC BY). */
+  attribution: string | null;
   defaultCamera: { position: Vec3; target: Vec3 };
 };
 
@@ -29,9 +31,26 @@ export const MODEL_3D_ASSETS: Model3dAsset[] = [
     filePath: 'assets/models/underbone_v1.glb',
     version: 1,
     licenseNote: 'Dibuat prosedural oleh proyek PrimeGarage (MIT), skrip apps/mobile/scripts/generate-underbone-model.mjs',
+    attribution: null,
     defaultCamera: { position: [2.1, 1.25, 2.3], target: [0, 0.5, 0] },
   },
+  {
+    key: 'honda_supra_x_125_fi_v1',
+    category: 'underbone',
+    filePath: 'assets/models/honda_supra_x_125_fi_v1.glb',
+    version: 1,
+    licenseNote:
+      '"Honda Supra x 125" oleh boiledfish.vvti (https://sketchfab.com/3d-models/honda-supra-x-125-6d61abb3aa3a4161bda31ef783111015), CC BY 4.0. Diubah: orientasi, nama node, dan titik sentuh.',
+    attribution: 'Model 3D: "Honda Supra x 125" oleh boiledfish.vvti, CC BY 4.0',
+    defaultCamera: { position: [2.2, 1.3, 2.4], target: [0, 0.55, 0] },
+  },
 ];
+
+/** Fallback model when a vehicle-specific model cannot be loaded on a device. */
+export const FALLBACK_MODEL_KEY = 'underbone_v1';
+
+/** Node name prefix for non-interactive meshes; part lookup stops at these nodes. */
+export const BODY_MESH_PREFIX = 'body__';
 
 /** Mesh name prefix for interactive parts. */
 export const PART_MESH_PREFIX = 'part__';
@@ -40,8 +59,13 @@ export const PART_MESH_PREFIX = 'part__';
 export function partCodeFromNodeName(name: string): string | null {
   if (!name.startsWith(PART_MESH_PREFIX)) return null;
   const rest = name.slice(PART_MESH_PREFIX.length);
-  const code = rest.replace(/__\d+$/, '');
+  const code = rest.replace(/__(\d+|hs\d*)$/, '');
   return code.length > 0 ? code : null;
+}
+
+/** Hotspot marker meshes (`part__<code>__hs`, `part__<code>__hs2`) for parts without their own mesh. */
+export function isHotspotNodeName(name: string): boolean {
+  return /^part__.+__hs\d*$/.test(name);
 }
 
 function v(partCode: string, cameraPosition: Vec3, cameraTarget: Vec3): PartView {
@@ -69,8 +93,61 @@ export const UNDERBONE_V1_PART_VIEWS: PartView[] = [
   v('fuel_tank', [-0.3, 1.25, 1.0], [-0.27, 0.78, 0.0]),
 ];
 
+/**
+ * Honda Supra X 125 FI (Sketchfab model, normalized to the project axes).
+ * The source model only separates wheels, forks, swingarm, fender, and handlebars, so the
+ * remaining parts are marked with hotspot spheres placed at these anchors.
+ */
+export const SUPRA_X_125_ANCHORS: Record<string, Vec3> = {
+  engine_oil: [0.1, 0.28, 0.14],
+  spark_plug: [0.17, 0.45, 0.0],
+  air_filter: [-0.2, 0.5, -0.12],
+  drive_chain: [-0.4, 0.33, -0.11],
+  brake_pad_front: [0.56, 0.36, -0.08],
+  brake_fluid: [0.25, 1.05, 0.2],
+  brake_shoe_rear: [-0.66, 0.32, 0.08],
+  tire_front: [0.65, 0.29, 0.0],
+  tire_rear: [-0.66, 0.32, 0.0],
+  battery: [-0.05, 0.6, 0.0],
+  throttle_body: [0.05, 0.5, 0.0],
+  clutch: [-0.02, 0.36, 0.14],
+  valve_clearance: [0.25, 0.38, 0.0],
+  front_fork: [0.58, 0.62, 0.0],
+  rear_shock: [-0.5, 0.55, 0.13],
+  lighting: [0.45, 0.98, 0.0],
+  exhaust: [-0.45, 0.42, 0.18],
+  fuel_tank: [-0.4, 0.68, 0.0],
+};
+
+/** Extra hotspot positions for parts that appear in several places (e.g. head and tail lights). */
+export const SUPRA_X_125_EXTRA_HOTSPOTS: { partCode: string; position: Vec3 }[] = [{ partCode: 'lighting', position: [-0.95, 0.8, 0.0] }];
+
+/** Parts represented by the source model's own meshes (node renamed to part__<code>). */
+export const SUPRA_X_125_MESH_PARTS: Record<string, string> = {
+  wheel_front: 'tire_front',
+  wheel_rear: 'tire_rear',
+  forks_front: 'front_fork',
+  forks_rear: 'rear_shock',
+};
+
+/** Camera view derived from an anchor: look at it from its own side, slightly above and in front. */
+export function viewFromAnchor(partCode: string, anchor: Vec3): PartView {
+  const side = anchor[2] < -0.03 ? -1 : 1;
+  const cameraPosition: Vec3 = [anchor[0] + 0.35, anchor[1] + 0.35, anchor[2] + side * 1.0];
+  return { partCode, cameraPosition, cameraTarget: anchor, labelAnchor: anchor };
+}
+
+export const SUPRA_X_125_PART_VIEWS: PartView[] = Object.entries(SUPRA_X_125_ANCHORS).map(([code, anchor]) => {
+  if (code === 'tire_front' || code === 'tire_rear' || code === 'front_fork') {
+    return { partCode: code, cameraPosition: [anchor[0] + 0.7, anchor[1] + 0.45, 1.3], cameraTarget: anchor, labelAnchor: anchor };
+  }
+  if (code === 'lighting') return { partCode: code, cameraPosition: [1.5, 1.3, 0.9], cameraTarget: anchor, labelAnchor: anchor };
+  return viewFromAnchor(code, anchor);
+});
+
 export const PART_VIEWS_BY_MODEL: Record<string, PartView[]> = {
   underbone_v1: UNDERBONE_V1_PART_VIEWS,
+  honda_supra_x_125_fi_v1: SUPRA_X_125_PART_VIEWS,
 };
 
 export function modelKeyForCategory(category: VehicleCategory): string {

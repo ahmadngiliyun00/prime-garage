@@ -4,6 +4,7 @@ import { Component, useCallback, useMemo, useState, type ReactNode } from 'react
 import { Pressable, ScrollView, Text, View, useColorScheme, useWindowDimensions } from 'react-native';
 import {
   COMPONENT_STATUS_COLORS,
+  FALLBACK_MODEL_KEY,
   MODEL_3D_ASSETS,
   PART_VIEWS_BY_MODEL,
   SERVICE_ACTION_LABELS,
@@ -43,7 +44,10 @@ export function VehicleExplorer({ vehicle, components }: { vehicle: VehicleDto; 
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const { data: parts = [] } = useParts();
-  const { data: model3d } = useModel3d(vehicle.model3dKey);
+  // A vehicle-specific model falls back to the procedural template if it cannot load on this device.
+  const [modelKey, setModelKey] = useState(MODEL_3D_ASSETS.some((m) => m.key === vehicle.model3dKey) ? vehicle.model3dKey : FALLBACK_MODEL_KEY);
+  const { data: model3d } = useModel3d(modelKey);
+  const asset = MODEL_3D_ASSETS.find((m) => m.key === modelKey);
   const completeTour = useCompleteTour(vehicle.id);
 
   const [selected, setSelected] = useState<string | null>(null);
@@ -53,14 +57,13 @@ export function VehicleExplorer({ vehicle, components }: { vehicle: VehicleDto; 
   const [tourStep, setTourStep] = useState<number | null>(vehicle.eduTourCompletedAt ? null : 0);
 
   const views = useMemo(
-    () => model3d?.partViews ?? PART_VIEWS_BY_MODEL[vehicle.model3dKey] ?? PART_VIEWS_BY_MODEL['underbone_v1'] ?? [],
-    [model3d, vehicle.model3dKey],
+    () =>
+      (model3d?.key === modelKey ? model3d.partViews : undefined) ?? PART_VIEWS_BY_MODEL[modelKey] ?? PART_VIEWS_BY_MODEL[FALLBACK_MODEL_KEY] ?? [],
+    [model3d, modelKey],
   );
   const defaultCamera = useMemo(
-    () =>
-      model3d?.defaultCamera ??
-      MODEL_3D_ASSETS.find((m) => m.key === vehicle.model3dKey)?.defaultCamera ?? { position: [2.1, 1.25, 2.3] as const, target: [0, 0.5, 0] as const },
-    [model3d, vehicle.model3dKey],
+    () => asset?.defaultCamera ?? { position: [2.1, 1.25, 2.3] as const, target: [0, 0.5, 0] as const },
+    [asset],
   ) as { position: [number, number, number]; target: [number, number, number] };
 
   const availableParts = useMemo(() => {
@@ -83,7 +86,13 @@ export function VehicleExplorer({ vehicle, components }: { vehicle: VehicleDto; 
   const tourPart = tourStep != null ? tourParts[tourStep] : undefined;
   const activePart = tourPart?.code ?? selected;
   const focusView = views.find((v) => v.partCode === activePart) ?? null;
-  const onError = useCallback((e: Error) => setViewerError(e.message), []);
+  const onError = useCallback(
+    (e: Error) => {
+      if (modelKey !== FALLBACK_MODEL_KEY) setModelKey(FALLBACK_MODEL_KEY);
+      else setViewerError(e.message);
+    },
+    [modelKey],
+  );
   const select = useCallback((code: string | null) => {
     setTourStep(null);
     setSelected(code);
@@ -102,9 +111,10 @@ export function VehicleExplorer({ vehicle, components }: { vehicle: VehicleDto; 
       <Muted className="text-center">{viewerError}. Gunakan daftar bagian di bawah.</Muted>
     </View>
   ) : (
-    <CanvasBoundary onError={onError}>
+    <CanvasBoundary key={modelKey} onError={onError}>
       <Viewer3D
-        modelKey={vehicle.model3dKey}
+        key={modelKey}
+        modelKey={modelKey}
         selectedPart={activePart}
         onSelectPart={select}
         partColors={partColors}
@@ -142,12 +152,15 @@ export function VehicleExplorer({ vehicle, components }: { vehicle: VehicleDto; 
           )}
           {!tourPart && !viewerError ? (
             <View className="absolute bottom-2 left-2 right-2 flex-row items-center justify-between" pointerEvents="box-none">
-              <Muted className="rounded-lg bg-white/80 px-2 py-1 dark:bg-slate-900/80">Sentuh bagian motor. Geser untuk memutar.</Muted>
+              <Muted className="rounded-lg bg-white/80 px-2 py-1 dark:bg-slate-900/80">
+                Sentuh bagian motor atau titik biru. Geser untuk memutar.
+              </Muted>
             </View>
           ) : null}
         </View>
 
         {statusMode ? <StatusLegend /> : null}
+        {asset?.attribution && !viewerError ? <Muted className="mt-1 text-xs">{asset.attribution}</Muted> : null}
 
         <View className="mt-3 flex-row flex-wrap gap-2">
           <Button

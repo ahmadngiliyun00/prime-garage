@@ -37,6 +37,7 @@ function underbone(
   yearStart: number | null,
   yearEnd: number | null,
   specs: Record<string, string | number> = {},
+  model3dKey = 'underbone_v1',
 ): VehicleModelDefinition {
   return {
     brandSlug,
@@ -50,18 +51,24 @@ function underbone(
     finalDrive: 'chain',
     yearStart,
     yearEnd,
-    model3dKey: 'underbone_v1',
+    model3dKey,
     specs,
   };
 }
 
 export const VEHICLE_MODELS: VehicleModelDefinition[] = [
-  underbone('honda', 'Supra X 125 FI', 'honda-supra-x-125-fi', 125, 'injection', 2014, null, {
-    engineOilCapacityL: 0.8,
-    tireFront: '70/90-17',
-    tireRear: '80/90-17',
-  }),
-  underbone('honda', 'Supra X 125', 'honda-supra-x-125', 125, 'carburetor', 2005, 2013),
+  underbone(
+    'honda',
+    'Supra X 125 FI',
+    'honda-supra-x-125-fi',
+    125,
+    'injection',
+    2014,
+    null,
+    { engineOilCapacityL: 0.8, tireFront: '70/90-17', tireRear: '80/90-17' },
+    'honda_supra_x_125_fi_v1',
+  ),
+  underbone('honda', 'Supra X 125', 'honda-supra-x-125', 125, 'carburetor', 2005, 2013, {}, 'honda_supra_x_125_fi_v1'),
   underbone('honda', 'Revo X', 'honda-revo-x', 110, 'injection', 2014, null),
   underbone('honda', 'Blade 125 FI', 'honda-blade-125-fi', 125, 'injection', 2014, 2019),
   underbone('yamaha', 'Jupiter Z1', 'yamaha-jupiter-z1', 115, 'injection', 2012, null),

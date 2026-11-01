@@ -275,8 +275,8 @@ export function sortByUrgency<T extends Pick<ComponentStatusResult, 'status' | '
  * Worst status per part (a part can have several rules: inspect, replace, ...).
  * Used to color 3D meshes.
  */
-export function worstStatusByPart(results: readonly ComponentStatusResult[]): Record<string, ComponentStatusResult> {
-  const out: Record<string, ComponentStatusResult> = {};
+export function worstStatusByPart<T extends ComponentStatusResult>(results: readonly T[]): Record<string, T> {
+  const out: Record<string, T> = {};
   for (const r of results) {
     const current = out[r.partCode];
     if (

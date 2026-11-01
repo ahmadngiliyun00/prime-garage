@@ -1,21 +1,41 @@
 import { useFrame, useLoader, useThree, type ThreeEvent } from '@react-three/fiber';
-import { partCodeFromNodeName, type PartView, type Vec3 } from '@prime-garage/shared';
+import { BODY_MESH_PREFIX, isHotspotNodeName, partCodeFromNodeName, type PartView, type Vec3 } from '@prime-garage/shared';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { ControlsLike } from './types';
 
 const SELECT_COLOR = '#2563eb';
+const HOTSPOT_SELECTED_COLOR = '#dc2626';
 
-/** Finds the part code of a mesh by walking up to the nearest `part__*` node. */
+/**
+ * Finds the part code of a mesh by walking up to the nearest `part__*` node.
+ * A `body__*` node on the way means the mesh is non-interactive.
+ */
 export function partCodeOf(object: THREE.Object3D | null): string | null {
   let o: THREE.Object3D | null = object;
   while (o) {
     const code = partCodeFromNodeName(o.name);
     if (code) return code;
+    if (o.name.startsWith(BODY_MESH_PREFIX)) return null;
     o = o.parent;
   }
   return null;
+}
+
+/** Hotspot markers stay visible through the bodywork so users can find hidden parts (oil, spark plug, ...). */
+function prepareHotspots(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const hotspot = isHotspotNodeName(mesh.name) || (mesh.parent != null && isHotspotNodeName(mesh.parent.name));
+    if (!hotspot) return;
+    const m = (mesh.material as THREE.Material).clone();
+    m.depthTest = false;
+    m.transparent = true;
+    mesh.material = m;
+    mesh.renderOrder = 10;
+  });
 }
 
 type MeshWithOriginal = THREE.Mesh & { userData: { originalMaterial?: THREE.Material } };
@@ -34,7 +54,11 @@ export function VehicleModel({
   onLoaded: () => void;
 }) {
   const gltf = useLoader(GLTFLoader, uri);
-  const scene = useMemo(() => gltf.scene.clone(true), [gltf]);
+  const scene = useMemo(() => {
+    const s = gltf.scene.clone(true);
+    prepareHotspots(s);
+    return s;
+  }, [gltf]);
   const invalidate = useThree((s) => s.invalidate);
 
   useEffect(() => {
@@ -42,6 +66,7 @@ export function VehicleModel({
   }, [onLoaded]);
 
   // Highlight: selected part in blue, other parts in their status color (FR-3D-03, FR-3D-05).
+  // Hotspot markers: the selected one turns red and grows, the others fade so the focus stays clear.
   useEffect(() => {
     scene.traverse((obj) => {
       const mesh = obj as MeshWithOriginal;
@@ -50,6 +75,21 @@ export function VehicleModel({
       const original = mesh.userData.originalMaterial as THREE.MeshStandardMaterial;
       const code = partCodeOf(mesh);
       const isSelected = code != null && code === selectedPart;
+      const hotspot = isHotspotNodeName(mesh.name);
+
+      if (hotspot) {
+        const m = original.clone();
+        const status = code ? partColors[code] : undefined;
+        if (isSelected) m.color = new THREE.Color(HOTSPOT_SELECTED_COLOR);
+        else if (status) m.color = new THREE.Color(status);
+        m.emissive = m.color.clone();
+        m.emissiveIntensity = 0.6;
+        m.opacity = selectedPart && !isSelected ? 0.35 : 0.95;
+        mesh.material = m;
+        mesh.scale.setScalar(isSelected ? 1.6 : 1);
+        return;
+      }
+
       const color = isSelected ? SELECT_COLOR : code ? partColors[code] : undefined;
       if (!color) {
         mesh.material = original;
@@ -74,11 +114,14 @@ export function VehicleModel({
     invalidate();
   }, [scene, selectedPart, partColors, invalidate]);
 
+  // R3F delivers the click to every intersected mesh, nearest first. Bodywork without a part code
+  // lets the event continue, so a hotspot behind the body panel still gets selected.
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation();
     if (e.delta > 6) return; // a drag, not a tap
     const code = partCodeOf(e.object);
-    if (code) onSelectPart(code);
+    if (!code) return;
+    e.stopPropagation();
+    onSelectPart(code);
   };
 
   return <primitive object={scene} onClick={onClick} />;

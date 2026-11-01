@@ -66,6 +66,7 @@ const server = http.createServer(async (req, res) => {
 
 // WebSocket upgrade for Socket.IO under /api/socket.io
 server.on('upgrade', (req, socket, head) => {
+  socket.on('error', () => socket.destroy());
   const upstream = net.connect(Number(api.port), api.hostname, () => {
     const headers = Object.entries(req.headers)
       .map(([k, v]) => `${k}: ${v}`)
