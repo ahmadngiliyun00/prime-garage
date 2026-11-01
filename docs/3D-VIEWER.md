@@ -4,8 +4,9 @@ Fitur prioritas utama pemilik proyek: pengguna melihat model 3D kendaraannya, me
 
 ## 1. Pendekatan
 
-- **Template per kategori** (ADR-006). MVP memakai satu model: `underbone_v1` (motor bebek, acuan bentuk Honda Supra X 125). Kendaraan apa pun berkategori `underbone` memakai model ini.
-- Model spesifik per tipe (misal `honda_supra_x_125_fi_v1`) dapat ditambahkan kemudian **tanpa mengubah kode**, cukup mengikuti konvensi mesh di bagian 3 dan menambah baris `model_3d_assets`.
+- **Template per kategori** (ADR-006): `underbone_v1` (motor bebek prosedural) dipakai untuk semua kendaraan berkategori bebek, kategori lain yang belum punya model, dan sebagai **cadangan otomatis** jika model spesifik gagal dimuat.
+- **Model spesifik per tipe** (ADR-009): `honda_supra_x_125_fi_v1` dari Sketchfab (boiledfish.vvti, CC BY 4.0) dipakai oleh katalog Honda Supra X 125 dan Supra X 125 FI.
+- Model baru ditambahkan dengan: file `.glb` di `apps/mobile/assets/models/`, entri `MODEL_3D_ASSETS` dan `PART_VIEWS_BY_MODEL` di `packages/shared/src/catalog/model-views.ts`, entri `MODEL_ASSETS` di `apps/mobile/src/features/viewer3d/model-assets.ts`, lalu `npm run db:seed`.
 - Interaksi dan konten edukasi berasal dari database (`parts`, `model_3d_part_views`), bukan hardcode.
 
 ## 2. Teknologi
@@ -39,13 +40,16 @@ Kode viewer berada di `apps/mobile/src/features/viewer3d/` dengan pemisahan file
 |---|---|---|
 | `part__<part_code>` | Bagian interaktif, `part_code` sesuai tabel `parts` | `part__spark_plug` |
 | `part__<part_code>__<n>` | Bagian interaktif yang terdiri dari beberapa mesh | `part__drive_chain__01`, `part__drive_chain__02` |
-| `body__<nama>` | Bagian non-interaktif (rangka, bodi, jok) | `body__frame`, `body__seat` |
+| `part__<part_code>__hs`, `part__<part_code>__hs<n>` | Titik sentuh (hotspot) untuk bagian yang tidak punya mesh sendiri di model | `part__engine_oil__hs`, `part__lighting__hs2` |
+| `body__<nama>` | Bagian non-interaktif (rangka, bodi, jok) | `body__frame`, `body__chassis` |
 
-Aturan seleksi: saat mesh disentuh, telusuri ke atas (mesh lalu parent-nya) sampai menemukan node bernama `part__*`. Ambil `part_code` dari nama tersebut (buang akhiran `__<n>`). Jika tidak ditemukan, sentuhan diabaikan.
+Aturan seleksi: saat mesh disentuh, telusuri ke atas (mesh lalu parent-nya) sampai menemukan node bernama `part__*`; ambil `part_code` dari nama tersebut (buang akhiran `__<n>` atau `__hs<n>`). Penelusuran **berhenti** di node `body__*`. Jika mesh terdekat yang tersentuh tidak punya kode bagian, event diteruskan ke mesh berikutnya di sepanjang sinar, sehingga titik sentuh di balik panel bodi tetap bisa dipilih.
+
+Titik sentuh dirender selalu di atas bodi (tanpa depth test) agar bagian tersembunyi seperti oli dan busi mudah ditemukan. Saat sebuah bagian terpilih, titiknya berubah merah dan membesar, titik lain meredup.
 
 Bagian yang tersembunyi di dalam mesin (misal oli mesin, celah katup) diwakili oleh mesh penanda yang terlihat, contoh: tutup pengisian oli untuk `engine_oil`, tutup kepala silinder untuk `valve_clearance`.
 
-### 3.3 Daftar bagian `underbone_v1`
+### 3.3 Daftar bagian `underbone_v1` (model prosedural)
 
 | part_code | Nama | Mesh penanda | Urutan tur |
 |---|---|---|---|
@@ -69,6 +73,16 @@ Bagian yang tersembunyi di dalam mesin (misal oli mesin, celah katup) diwakili o
 | fuel_tank | Tangki bensin | Tangki (bawah jok untuk bebek) | |
 
 Bagian yang tidak punya urutan tur tetap dapat disentuh, hanya tidak masuk tur awal.
+
+### 3.4 Pemetaan `honda_supra_x_125_fi_v1`
+
+Model sumber hanya memisahkan roda, garpu depan, swing arm, spakbor depan, dan setang. Skrip `apps/mobile/scripts/prepare-supra-model.mjs` (jalankan dengan `npm run prepare:supra-model -- <source.glb>` dari `apps/mobile`):
+1. Menormalkan sumbu (sumber menghadap -Z dengan tanah di y = -0,445) ke konvensi proyek.
+2. Mengganti nama node: `wheel_front` menjadi `part__tire_front`, `wheel_rear` menjadi `part__tire_rear`, `forks_front` menjadi `part__front_fork`, `forks_rear` (swing arm dan shock) menjadi `part__rear_shock`, `chassis` menjadi `body__chassis`, `mudguard` menjadi `body__front_fender`, `handlebars` menjadi `body__handlebars`.
+3. Menambah titik sentuh untuk bagian lain di posisi `SUPRA_X_125_ANCHORS` (`packages/shared/src/catalog/model-views.ts`), termasuk titik kedua lampu di lampu belakang.
+4. Memvalidasi bahwa semua 18 bagian katalog terjangkau.
+
+Posisi kamera per bagian dihitung dari posisi titik sentuh (`viewFromAnchor`). Kredit penulis model tampil di bawah viewer (syarat lisensi CC BY 4.0).
 
 ## 4. Interaksi
 
@@ -101,7 +115,9 @@ Bagian yang tidak punya urutan tur tetap dapat disentuh, hanya tidak masuk tur a
 - Batasi `dpr` maksimal 2 dan render on-demand (`frameloop="demand"`) saat tidak ada interaksi.
 - Target 30 fps atau lebih di Android kelas menengah (NFR-04).
 
-## 7. Sumber model 3D (keputusan terbuka no. 3)
+## 7. Sumber model 3D
+
+Keputusan pemilik: model dibuat sendiri, dan jika ada model yang cocok, gunakan model tersebut. Saat ini: `underbone_v1` (prosedural, MIT) dan `honda_supra_x_125_fi_v1` (Sketchfab, CC BY 4.0). Pertimbangan untuk model berikutnya:
 
 | Opsi | Kelebihan | Kekurangan |
 |---|---|---|
@@ -109,4 +125,4 @@ Bagian yang tidak punya urutan tur tetap dapat disentuh, hanya tidak masuk tur a
 | Pesan ke 3D artist | Sesuai kebutuhan, bagian sudah terpisah | Biaya dan waktu |
 | Buat sendiri di Blender (low-poly stylized) | Kontrol penuh, gratis | Butuh waktu belajar |
 
-Rekomendasi: mulai dengan **model low-poly stylized** (tidak harus fotorealistis). Lebih ringan, lebih mudah dipisah per bagian, dan menghindari masalah merek dagang. Untuk spike Fase 1, boleh memakai model placeholder sederhana (bentuk primitif bernama sesuai konvensi) agar pengembangan tidak menunggu model final.
+Model pihak ketiga wajib berlisensi yang mengizinkan distribusi di aplikasi (CC BY, CC0, atau lisensi komersial) dan dicatat di `apps/mobile/assets/models/LICENSES.md`. Bagian yang tidak terpisah cukup ditandai titik sentuh; tidak perlu memotong mesh.

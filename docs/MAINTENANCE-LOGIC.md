@@ -1,6 +1,6 @@
 # Logika Perawatan dan Pengingat
 
-Dokumen ini mendefinisikan cara PrimeGarage memperkirakan sisa umur komponen dan kapan pengingat dikirim. Implementasi **hanya** ada di `packages/shared/src/maintenance/` sebagai fungsi murni (tanpa akses database, tanpa `Date.now()` langsung; waktu sekarang dikirim sebagai parameter) agar mudah diuji dan dipakai bersama oleh app dan worker.
+Dokumen ini mendefinisikan cara PrimeGarage memperkirakan sisa umur komponen dan kapan pengingat dikirim. Implementasi **hanya** ada di `packages/shared/src/maintenance/` (`compute-component-status.ts`, `reminders.ts`, `calendar.ts`; test di `compute-component-status.test.ts`) sebagai fungsi murni (tanpa akses database, tanpa `Date.now()` langsung; waktu sekarang dikirim sebagai parameter) agar mudah diuji dan dipakai bersama oleh app dan worker.
 
 ## 1. Prinsip
 
@@ -24,20 +24,20 @@ type RuleInput = {
 type VehicleInput = {
   initialOdometerKm: number;
   currentOdometerKm: number;
-  currentOdometerAt: Date;
-  purchaseDate: Date | null;
+  currentOdometerAt: Date | string;   // waktu (instant)
+  purchaseDate: string | null;        // tanggal kalender YYYY-MM-DD
 };
 
-type ServiceHistoryItem = {      // item servis untuk partCode terkait
+type ServiceHistoryItem = {           // item servis untuk partCode terkait
   serviceRecordId: string;
-  serviceDate: Date;             // tanggal kalender
+  serviceDate: string;                // tanggal kalender YYYY-MM-DD
   odometerKm: number;
   action: ServiceAction;
 };
 
-type OdometerPoint = { km: number; recordedAt: Date };
+type OdometerPoint = { km: number; recordedAt: Date | string };
 
-computeComponentStatus(rule, vehicle, history, odometerLogs, now, timezone): ComponentStatusResult
+computeComponentStatus({ rule, vehicle, history, odometerLogs, now, timezone }): ComponentStatusResult
 ```
 
 ## 3. Langkah perhitungan
@@ -105,7 +105,10 @@ type ComponentStatusResult = {
   dueKm: number | null;
   dueDate: string | null;      // YYYY-MM-DD dalam zona waktu pengguna
   dueReason: "km" | "time" | null;
+  overdueDays: number;         // hari lewat dari dueDate (0 jika belum)
+  overdueKm: number;           // km lewat dari dueKm (0 jika belum)
   isOdometerStale: boolean;
+  today: string;               // tanggal hari ini di zona waktu pengguna
 };
 ```
 
@@ -135,12 +138,12 @@ Jika pengguna jarang berkendara sehingga km tidak bertambah, `dueDate` menjadi 1
 Worker berjalan setiap hari pukul **07.00 WIB** (00.00 UTC).
 
 1. Untuk setiap kendaraan yang tidak diarsipkan, untuk setiap aturan `is_enabled = true` yang `snoozed_until` kosong atau sudah lewat: hitung status.
-2. Buat baris `notifications` sesuai tabel di bawah. `dedupe_key` UNIQUE mencegah duplikat; jika insert gagal karena duplikat, lewati.
+2. Buat baris `notifications` sesuai tabel di bawah untuk setiap anggota garasi. `dedupe_key` (ditambah akhiran `:{userId}`) UNIQUE mencegah duplikat; jika insert gagal karena duplikat, lewati.
 
 | Tipe | Kapan | `dedupe_key` |
 |---|---|---|
 | `component_soon` | Status `SOON` | `soon:{ruleId}:{baseline.key}` (sekali per siklus) |
-| `component_due` | Status `DUE`, hari ke-0, 7, 14 setelah jatuh tempo, lalu setiap 30 hari | `due:{ruleId}:{baseline.key}:{n}` dengan `n` = urutan pengulangan |
+| `component_due` | Status `DUE`, hari ke-0, 7, 14 setelah jatuh tempo, lalu setiap 30 hari (hari ke-44, 74, dst.) | `due:{ruleId}:{baseline.key}:{n}` dengan `n` = urutan pengulangan (`dueRepeatIndex`) |
 | `odometer_stale` | Tidak ada log odometer lebih dari 14 hari | `odo:{vehicleId}:{tahun-minggu ISO}` (maks sekali per minggu) |
 
 3. Siklus baru dimulai otomatis saat pengguna mencatat servis yang mereset aturan, karena `baseline.key` berubah.
@@ -155,7 +158,7 @@ Contoh isi pengingat:
 
 ## 6. Interval default: kategori bebek (underbone), acuan Honda Supra X 125 FI
 
-**Penting**: nilai di bawah adalah **estimasi umum awal** dan **wajib diverifikasi dengan buku servis resmi** sebelum Fase 3 (lihat PRD Keputusan terbuka no. 5). Pengguna selalu dapat mengubahnya per kendaraan.
+**Penting**: nilai di bawah adalah **estimasi umum awal** dan **wajib diverifikasi dengan buku servis resmi** sebelum rilis produksi (lihat PRD bagian 11). Pengguna selalu dapat mengubahnya per kendaraan.
 
 | part_code | Komponen | Tindakan | Interval km | Interval bulan | reset_actions |
 |---|---|---|---|---|---|

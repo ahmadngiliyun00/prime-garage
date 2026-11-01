@@ -189,12 +189,18 @@ Prioritas: **M** = Must (MVP), **S** = Should (MVP jika sempat), **C** = Could (
 | Item servis | Satu pekerjaan dalam satu servis (contoh: ganti oli mesin 0,8 L). |
 | Baseline | Titik acuan (tanggal dan km) terakhir kali komponen dirawat. |
 
-## 10. Keputusan terbuka
+## 10. Keputusan yang sudah ditetapkan pemilik
+
+| No | Keputusan | Nilai |
+|---|---|---|
+| 1 | Package name Android (`applicationId`), tidak bisa diubah setelah rilis | `my.id.ngiliyun.primegarage` |
+| 2 | Domain | `primegarage.ngiliyun.my.id` untuk web, API di path `/api` pada domain yang sama (ADR-008) |
+| 3 | Sumber model 3D | Model Honda Supra X 125 dari Sketchfab yang disediakan pemilik (boiledfish.vvti, CC BY 4.0, ADR-009), ditambah model prosedural `underbone_v1` buatan proyek sebagai template dan cadangan |
+| 4 | Penyedia SMTP email | Google Workspace domain `@ngiliyun.my.id` (`smtp.gmail.com`, App Password) |
+
+## 11. Keputusan terbuka
 
 | No | Keputusan | Batas waktu |
 |---|---|---|
-| 1 | Package name Android (`applicationId`), tidak bisa diubah setelah rilis. Usulan: `com.primegarage.app`. | Sebelum build AAB pertama |
-| 2 | Domain web dan API (usulan: `app.<domain>` dan `api.<domain>`). | Sebelum Fase 2 |
-| 3 | Sumber model 3D: buat sendiri di Blender, pesan ke 3D artist, atau beli model berlisensi. | Awal Fase 1 |
-| 4 | Penyedia SMTP email (SMTP VPS sendiri, Brevo, Resend, Mailgun, dll.). | Sebelum Fase 4 |
-| 5 | Nilai interval default per komponen diverifikasi dari buku servis resmi. | Sebelum Fase 3 |
+| 1 | Nilai interval default per komponen diverifikasi dari buku servis resmi. | Sebelum rilis produksi |
+| 2 | Alamat pengirim email (usulan `noreply@ngiliyun.my.id`). | Sebelum rilis produksi |

@@ -1,92 +1,104 @@
 # Deployment PrimeGarage
 
-Target produksi: **VPS Ubuntu 24.04 dengan aaPanel**, Nginx, MySQL 8, Node.js LTS, PM2. Android didistribusikan lewat Google Play (AAB dari EAS Build).
+Target produksi: **VPS Ubuntu 24.04 dengan aaPanel**, Nginx, MySQL 8, Node.js 22 LTS, npm 11, PM2. Android didistribusikan lewat Google Play (AAB dari EAS Build).
 
-Domain contoh (final: PRD Keputusan terbuka no. 2):
-- `app.primegarage.example` untuk web SPA
-- `api.primegarage.example` untuk API dan realtime
+| Komponen | Alamat |
+|---|---|
+| Web (SPA) | `https://primegarage.ngiliyun.my.id/` |
+| API REST | `https://primegarage.ngiliyun.my.id/api/...` |
+| Realtime | `wss://primegarage.ngiliyun.my.id/api/socket.io` |
+| Package Android | `my.id.ngiliyun.primegarage` |
+| Email pengirim | Google Workspace `@ngiliyun.my.id` (usulan `noreply@ngiliyun.my.id`) |
+
+## 0. Persiapan sekali saja
+
+### 0.1 Server
+Pastikan Node.js 22 dan PM2 tersedia, lalu pasang npm 11 (ADR-010):
+
+```bash
+npm install -g npm@11
+```
+
+```bash
+mkdir -p /www/prime-garage/storage
+```
+
+```bash
+git clone https://github.com/ahmadngiliyun00/prime-garage.git /www/prime-garage/app
+```
+
+### 0.2 Google OAuth (Google Cloud Console)
+1. Buat project, lalu **OAuth consent screen** (External, nama aplikasi PrimeGarage, domain `ngiliyun.my.id`, tautan kebijakan privasi `https://primegarage.ngiliyun.my.id/privacy`).
+2. **Credentials > OAuth client ID > Web application**: Authorized JavaScript origins `https://primegarage.ngiliyun.my.id` (tambahkan `http://localhost:8081` untuk development). Catat client ID ini sebagai **client ID web**.
+3. **Credentials > OAuth client ID > Android**: package `my.id.ngiliyun.primegarage`, SHA-1 dari EAS (`eas credentials`) dan dari Play Console (App signing key) setelah aplikasi diunggah.
+4. Client ID web dan Android dimasukkan ke `GOOGLE_CLIENT_IDS` (API). Client ID web juga ke `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (app).
+
+### 0.3 SMTP Google Workspace
+1. Buat (atau pakai) akun `noreply@ngiliyun.my.id` di Google Workspace.
+2. Aktifkan verifikasi 2 langkah pada akun itu, lalu buat **App Password** (Akun Google > Keamanan > Sandi aplikasi).
+3. Isi `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER=noreply@ngiliyun.my.id`, `SMTP_PASS=<app password>`.
+4. Batas kirim Google Workspace sekitar 2.000 email per hari per akun; pengingat dikirim sebagai satu email ringkasan per pengguna per hari.
+
+### 0.4 Expo dan push notification
+1. Buat akun Expo, lalu di `apps/mobile` jalankan `npx eas-cli@latest init` untuk mendapatkan **EAS project ID**. Simpan sebagai variabel `EAS_PROJECT_ID` di EAS (Environment variables) agar `app.config.ts` mengisinya.
+2. Buat project Firebase untuk package `my.id.ngiliyun.primegarage`, buat **service account key FCM V1**, unggah ke EAS (`eas credentials` > Android > Push Notifications).
 
 ## 1. Variabel lingkungan
 
 ### 1.1 API (`apps/api/.env`, tidak di-commit)
-| Variabel | Contoh | Keterangan |
-|---|---|---|
-| `NODE_ENV` | `production` | |
-| `PORT` | `3000` | Hanya listen di `127.0.0.1` |
-| `DATABASE_URL` | `mysql://pg_user:***@127.0.0.1:3306/prime_garage` | User MySQL khusus aplikasi |
-| `JWT_ACCESS_SECRET` | acak 64 karakter | |
-| `JWT_ACCESS_TTL` | `15m` | |
-| `REFRESH_TOKEN_TTL_DAYS` | `30` | |
-| `GOOGLE_CLIENT_IDS` | `xxx.apps.googleusercontent.com,yyy...` | Client ID web dan Android, dipisah koma |
-| `CORS_ORIGINS` | `https://app.primegarage.example` | |
-| `STORAGE_DIR` | `/www/prime-garage/storage` | Di luar folder kode |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | | Penyedia SMTP |
-| `EXPO_ACCESS_TOKEN` | | Opsional, untuk keamanan push |
-| `APP_WEB_URL` | `https://app.primegarage.example` | Untuk tautan di email |
+Salin dari `apps/api/.env.example`. Nilai penting:
 
-### 1.2 App (`apps/mobile/.env`, ditanam saat build)
-| Variabel | Contoh |
+| Variabel | Nilai produksi |
 |---|---|
-| `EXPO_PUBLIC_API_URL` | `https://api.primegarage.example` |
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | |
-| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | |
+| `NODE_ENV` | `production` |
+| `PORT`, `HOST` | `3000`, `127.0.0.1` |
+| `TRUST_PROXY` | `true` |
+| `DATABASE_URL` | `mysql://pg_user:<password>@127.0.0.1:3306/prime_garage` |
+| `JWT_ACCESS_SECRET` | acak minimal 32 karakter |
+| `GOOGLE_CLIENT_IDS` | client ID web dan Android, dipisah koma |
+| `APP_WEB_URL` | `https://primegarage.ngiliyun.my.id` |
+| `CORS_ORIGINS` | `https://primegarage.ngiliyun.my.id` |
+| `AUTH_DEV_LOGIN_ENABLED` | `false` (API menolak start jika `true` di production) |
+| `STORAGE_DIR` | `/www/prime-garage/storage` |
+| `SMTP_*`, `MAIL_FROM` | lihat bagian 0.3 |
+| `INTERNAL_API_URL`, `INTERNAL_API_SECRET` | `http://127.0.0.1:3000`, acak minimal 16 karakter |
+| `REMINDER_CRON` | `0 0 * * *` (07.00 WIB) |
+
+Membuat secret acak:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+### 1.2 App (`apps/mobile/.env` untuk build web, atau EAS environment untuk Android)
+| Variabel | Nilai produksi |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | `https://primegarage.ngiliyun.my.id` |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | client ID web |
+| `EXPO_PUBLIC_DEV_LOGIN` | `false` |
 
 Variabel `EXPO_PUBLIC_*` tertanam di bundle saat build, jadi **jangan** isi rahasia di sana.
 
 ## 2. Database (MySQL)
 
-1. aaPanel → Databases → Add database: nama `prime_garage`, user `pg_user`, akses `127.0.0.1` saja, charset `utf8mb4`.
-2. Migrasi dijalankan dari server saat deploy API:
-
-Jalankan dari folder `/www/prime-garage/app/apps/api`:
+1. aaPanel > Databases > Add database: nama `prime_garage`, user `pg_user`, akses `127.0.0.1` saja, charset `utf8mb4`.
+2. Migrasi dan seed katalog dijalankan dari folder `/www/prime-garage/app/apps/api`:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-3. Seed data katalog (sekali, atau saat katalog bertambah):
-
 ```bash
 npm run db:seed
 ```
 
-4. Backup: aaPanel → Cron → Backup database `prime_garage` setiap hari, simpan 14 hari. Backup juga folder `STORAGE_DIR`.
+Seed bersifat idempoten (aman dijalankan ulang saat katalog bertambah).
 
-## 3. API dan worker (PM2)
+3. Backup: aaPanel > Cron > Backup database `prime_garage` setiap hari, simpan 14 hari. Backup juga folder `/www/prime-garage/storage`.
 
-Struktur di server:
-```
-/www/prime-garage/
-├─ app/        # hasil git clone repo
-└─ storage/    # unggahan pengguna (persisten antar deploy)
-```
+## 3. Build dan jalankan API serta worker (PM2)
 
-`apps/api/ecosystem.config.cjs` (dibuat saat scaffold):
-```js
-module.exports = {
-  apps: [
-    {
-      name: "prime-garage-api",
-      script: "dist/main.js",
-      cwd: __dirname,
-      exec_mode: "fork",      // satu instance, lihat ADR-005
-      instances: 1,
-      env: { NODE_ENV: "production" },
-      max_memory_restart: "512M",
-    },
-    {
-      name: "prime-garage-worker",
-      script: "dist/worker.js",
-      cwd: __dirname,
-      exec_mode: "fork",
-      instances: 1,           // WAJIB 1 agar cron tidak berjalan ganda
-      env: { NODE_ENV: "production" },
-    },
-  ],
-};
-```
-
-Langkah deploy API. Dari folder `/www/prime-garage/app`:
+Dari folder `/www/prime-garage/app`:
 
 ```bash
 git pull origin main
@@ -97,14 +109,10 @@ npm ci
 ```
 
 ```bash
-npm run build -w packages/shared
+npm run build:api
 ```
 
-```bash
-npm run build -w apps/api
-```
-
-Lalu dari folder `/www/prime-garage/app/apps/api`:
+Dari folder `/www/prime-garage/app/apps/api`:
 
 ```bash
 npx prisma migrate deploy
@@ -124,66 +132,72 @@ Sekali saja agar PM2 hidup setelah reboot:
 pm2 startup
 ```
 
-### 3.1 Nginx untuk `api.<domain>`
-aaPanel → Website → Add site `api.primegarage.example` → SSL (Let's Encrypt) → Config, isi blok berikut di dalam `server`:
+`ecosystem.config.cjs` menjalankan dua proses: `prime-garage-api` (fork, 1 instance) dan `prime-garage-worker` (fork, **wajib 1 instance** agar cron tidak ganda). Cek kesehatan:
 
-```nginx
-client_max_body_size 6m;
-
-location / {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;      # WebSocket untuk Socket.IO
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_read_timeout 86400;                    # koneksi realtime jangka panjang
-}
+```bash
+curl -s http://127.0.0.1:3000/api/health
 ```
 
-API harus mengaktifkan `trust proxy` agar IP dan protokol asli terbaca.
+## 4. Build web (SPA)
 
-## 4. Web SPA
-
-Build bisa di lokal/CI lalu diunggah, atau langsung di server:
-
-Dari folder `/www/prime-garage/app/apps/mobile`:
+Dari folder `/www/prime-garage/app/apps/mobile` (pastikan `.env` berisi nilai bagian 1.2):
 
 ```bash
 npx expo export -p web
 ```
 
-Hasil di `apps/mobile/dist/`. Arahkan root situs `app.primegarage.example` ke folder tersebut (atau salin ke `/www/wwwroot/app.primegarage.example`).
+Hasil di `apps/mobile/dist/`.
 
-Nginx untuk `app.<domain>`:
+## 5. Nginx (aaPanel)
+
+aaPanel > Website > Add site `primegarage.ngiliyun.my.id` > SSL (Let's Encrypt, Force HTTPS) > Config. Set root dan tambahkan blok berikut di dalam `server`:
 
 ```nginx
 root /www/prime-garage/app/apps/mobile/dist;
 index index.html;
+client_max_body_size 6m;
 
 types { model/gltf-binary glb; }
 
+# API dan Socket.IO (ADR-008)
+location /api/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 86400;
+}
+
+# SPA fallback
 location / {
-    try_files $uri $uri/ /index.html;            # fallback SPA
+    try_files $uri $uri/ /index.html;
 }
 
 location = /index.html {
     add_header Cache-Control "no-cache";
 }
 
-location ~* \.(js|css|png|jpg|jpeg|webp|svg|ico|woff2|glb)$ {
+location /_expo/ {
     expires 1y;
     add_header Cache-Control "public, immutable";
 }
 ```
 
-**PWA untuk macOS**: sediakan `manifest.json` (nama, ikon 192 dan 512 px, `display: standalone`, `theme_color`) lewat konfigurasi web Expo. Pengguna Mac memasang lewat Safari (File → Add to Dock) atau Chrome (Install app). Service worker untuk cache offline menyusul.
+Pratinjau perilaku yang sama di lokal (statis, fallback SPA, proxy `/api` dan WebSocket):
 
-## 5. Android (Google Play)
+```bash
+node apps/mobile/scripts/serve-spa.mjs 8081 http://127.0.0.1:3000
+```
 
-### 5.1 Profil EAS (`apps/mobile/eas.json`)
+**PWA untuk macOS**: `public/manifest.json` dan ikon sudah disertakan. Pengguna Mac memasang lewat Safari (File > Add to Dock) atau Chrome (ikon Install di bilah alamat).
+
+## 6. Android (Google Play)
+
+### 6.1 Profil EAS (`apps/mobile/eas.json`)
 | Profil | Output | Kegunaan |
 |---|---|---|
 | `development` | Development build (APK) | Debug di HP fisik |
@@ -193,30 +207,66 @@ location ~* \.(js|css|png|jpg|jpeg|webp|svg|ico|woff2|glb)$ {
 Perintah, dari folder `apps/mobile`:
 
 ```bash
-eas build -p android --profile production
+npx eas-cli@latest build -p android --profile production
 ```
 
 ```bash
-eas submit -p android --profile production
+npx eas-cli@latest submit -p android --profile production
 ```
 
-### 5.2 Checklist Google Play
-- [ ] `applicationId` final (PRD Keputusan terbuka no. 1). **Tidak bisa diubah setelah rilis.**
+### 6.2 Checklist Google Play
+- [x] `applicationId` final: `my.id.ngiliyun.primegarage`. **Tidak bisa diubah setelah rilis.**
 - [ ] Akun Google Play Console aktif. Akun developer personal baru wajib menjalankan **closed testing** dengan sejumlah tester selama periode tertentu sebelum boleh rilis produksi; cek syarat terbaru di Play Console.
 - [ ] Play App Signing aktif (dikelola EAS credentials).
-- [ ] SHA-1 sertifikat signing (dari Play Console dan EAS) didaftarkan di Google Cloud OAuth client Android.
-- [ ] Firebase project untuk FCM, kredensial diunggah ke EAS agar push notification berjalan.
-- [ ] Ikon 512×512, feature graphic 1024×500, minimal 2 screenshot HP.
+- [ ] SHA-1 sertifikat signing didaftarkan di OAuth client Android (bagian 0.2).
+- [ ] Kredensial FCM diunggah ke EAS (bagian 0.4).
+- [ ] Ikon 512×512 (`apps/mobile/public/logo512.png`), feature graphic 1024×500, minimal 2 screenshot HP.
 - [ ] Deskripsi singkat dan lengkap (Bahasa Indonesia).
-- [ ] URL kebijakan privasi (halaman di `app.<domain>/privacy`).
-- [ ] URL penghapusan akun (halaman di `app.<domain>/delete-account`), sesuai FR-AUTH-04.
+- [ ] URL kebijakan privasi: `https://primegarage.ngiliyun.my.id/privacy`.
+- [ ] URL penghapusan akun: `https://primegarage.ngiliyun.my.id/delete-account` (FR-AUTH-04).
 - [ ] Formulir Data Safety: email, nama, foto profil (dari Google), data kendaraan, foto nota, token push.
 - [ ] Rating konten (kuesioner IARC).
-- [ ] Target API level sesuai syarat Play terbaru (mengikuti Expo SDK terbaru).
+- [ ] Target API level sesuai syarat Play terbaru (mengikuti Expo SDK).
 
-## 6. Urutan deploy rilis
+## 7. Urutan deploy rilis
 1. Merge ke `main`, tag versi (`v0.x.y`).
-2. Deploy API (bagian 3), pastikan migrasi sukses dan `pm2 logs` bersih.
-3. Build dan deploy web (bagian 4).
-4. Build AAB dan unggah ke track internal/closed testing (bagian 5), lalu promosikan ke produksi.
+2. Deploy API dan worker (bagian 3), pastikan migrasi sukses dan `pm2 logs` bersih.
+3. Build web (bagian 4); Nginx langsung melayani `dist/` yang baru.
+4. Build AAB dan unggah ke track internal/closed testing (bagian 6), lalu promosikan ke produksi.
 5. Uji cepat: login, tambah kendaraan, buka 3D, catat servis, cek realtime di dua perangkat.
+
+## 8. Development lokal
+
+1. MySQL 8 lokal dengan database `prime_garage`.
+2. Salin `apps/api/.env.example` ke `apps/api/.env`, set `NODE_ENV=development`, `AUTH_DEV_LOGIN_ENABLED=true`, `CORS_ORIGINS=http://localhost:8081`, `STORAGE_DIR=../../storage`.
+3. Salin `apps/mobile/.env.example` ke `apps/mobile/.env`.
+
+Dari root repo:
+
+```bash
+npx npm@11 install
+```
+
+```bash
+npm run db:migrate -w @prime-garage/api
+```
+
+```bash
+npm run db:seed -w @prime-garage/api
+```
+
+```bash
+npm run dev:api
+```
+
+Di terminal lain:
+
+```bash
+npm run dev:mobile
+```
+
+Tes end-to-end API (API harus berjalan dengan dev login aktif), dari `apps/api`:
+
+```bash
+node scripts/smoke-test.mjs
+```

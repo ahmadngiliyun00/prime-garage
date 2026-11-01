@@ -45,10 +45,21 @@ Jika perubahan memang perlu: tulis usulan ADR baru di `docs/ARCHITECTURE.md` (st
 - **Bahasa UI**: Bahasa Indonesia (default). Siapkan struktur i18n agar bahasa Inggris bisa ditambah.
 - **Bahasa kode**: identifier, nama tabel, kolom, dan komentar kode dalam bahasa Inggris. Dokumen di `docs/` dalam Bahasa Indonesia.
 - **Penamaan**: tabel MySQL `snake_case` jamak (`service_records`); model Prisma `PascalCase` tunggal dengan `@@map`; komponen React `PascalCase`; file non-komponen `kebab-case`.
-- **Commit**: Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`), boleh berbahasa Indonesia atau Inggris.
+- **Commit per tugas**: satu commit untuk satu tugas yang sudah selesai (misalnya tugas A, lalu tugas B, lalu tugas C), jangan menggabungkan banyak tugas dalam satu commit dan jangan commit tugas yang belum selesai. Format Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`), boleh berbahasa Indonesia atau Inggris.
+- **Package manager**: npm 11 (ADR-010). Gunakan `npx expo install` untuk dependency Expo agar versinya sesuai SDK.
 - **Gaya penulisan dokumen**: jangan gunakan karakter em dash dan simbol ampersand; pakai koma, titik dua, atau kata "dan".
 
-## 5. Definisi selesai (Definition of Done)
+## 5. Perintah penting
+
+| Perintah (dari root) | Fungsi |
+|---|---|
+| `npx npm@11 install` | Pasang dependency dan bangun `packages/shared` |
+| `npm run lint`, `npm run typecheck`, `npm test` | Wajib lulus sebelum commit |
+| `npm run dev:api`, `npm run dev:mobile` | Development |
+| `node apps/api/scripts/smoke-test.mjs` | Tes end-to-end API (API berjalan, dev login aktif) |
+| `npm run generate:model` | Bangun ulang `underbone_v1.glb` |
+
+## 6. Definisi selesai (Definition of Done)
 
 Sebuah fitur dianggap selesai jika:
 - Memenuhi kebutuhan ber-ID di PRD dan ID tersebut disebut di pesan commit atau PR.

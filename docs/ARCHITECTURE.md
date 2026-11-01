@@ -5,139 +5,147 @@ Dokumen ini **mengunci** tech stack. Perubahan hanya lewat ADR baru (lihat bagia
 ## 1. Gambaran sistem
 
 ```
-┌───────────────────────────┐        ┌──────────────────────────────────────────────┐
-│  apps/mobile (Expo)        │        │  VPS Ubuntu 24.04 (aaPanel)                   │
-│                            │ HTTPS  │                                                │
-│  Android (AAB)             │───────▶│  Nginx                                         │
-│  Web SPA (PWA untuk Mac)   │  WSS   │   ├─ app.<domain>  → file statis SPA (dist/)   │
-│                            │◀──────▶│   └─ api.<domain>  → reverse proxy :3000       │
-│  React Three Fiber (3D)    │        │                                                │
-│  TanStack Query            │        │  PM2                                           │
-│  socket.io-client          │        │   ├─ prime-garage-api     (NestJS, REST + WS) │
-└───────────────────────────┘        │   └─ prime-garage-worker  (cron pengingat)     │
-             ▲                        │                                                │
-             │ Push (Expo Push/FCM)   │  MySQL 8  (database: prime_garage)             │
-             └────────────────────────│  Disk: /www/prime-garage/storage (unggahan)    │
-                                      └──────────────────────────────────────────────┘
-                                                    │ SMTP → email pengingat
+┌───────────────────────────┐        ┌────────────────────────────────────────────────────┐
+│  apps/mobile (Expo)        │        │  VPS Ubuntu 24.04 (aaPanel)                         │
+│                            │ HTTPS  │                                                      │
+│  Android (AAB)             │───────▶│  Nginx: primegarage.ngiliyun.my.id                   │
+│  Web SPA (PWA untuk Mac)   │  WSS   │   ├─ /            → file statis SPA (dist/)          │
+│                            │◀──────▶│   └─ /api/        → reverse proxy 127.0.0.1:3000     │
+│  React Three Fiber (3D)    │        │                     (REST + Socket.IO /api/socket.io)│
+│  TanStack Query            │        │  PM2                                                 │
+│  socket.io-client          │        │   ├─ prime-garage-api     (NestJS, REST + WS)        │
+└───────────────────────────┘        │   └─ prime-garage-worker  (cron pengingat 07.00 WIB) │
+             ▲                        │  MySQL 8  (database: prime_garage)                   │
+             │ Push (Expo Push/FCM)   │  Disk: /www/prime-garage/storage (unggahan)          │
+             └────────────────────────│                                                      │
+                                      └────────────────────────────────────────────────────┘
+                                          │ SMTP Google Workspace (smtp.gmail.com:465) → email pengingat
 ```
 
 ## 2. Tech stack yang dikunci
 
+Versi di bawah adalah versi saat scaffold (1 November 2026). Upgrade versi minor/patch boleh; upgrade mayor perlu ADR.
+
 ### 2.1 Aplikasi klien (`apps/mobile`)
 | Kebutuhan | Pilihan | Catatan |
 |---|---|---|
-| Framework | **Expo** (SDK stabil terbaru saat scaffold) + React Native | Satu kode untuk Android, web, dan nanti iOS |
-| Routing | **Expo Router** (file-based) | |
-| Bahasa | **TypeScript** strict | |
+| Framework | **Expo SDK 58** + React Native 0.88 + React 19.3 | Satu kode untuk Android, web, dan nanti iOS |
+| Routing | **Expo Router** (file-based, folder `src/app`) | |
+| Bahasa | **TypeScript** strict (`noUncheckedIndexedAccess`) | |
 | Output web | **SPA** (`web.output: "single"`) | Di-host statis di Nginx |
-| Styling | **NativeWind** (Tailwind untuk React Native) | |
-| Data server | **TanStack Query** | Cache, refetch, invalidasi dari event realtime |
-| State lokal | **Zustand** | State UI saja (bukan data server) |
-| Form | **react-hook-form** + **zod** (skema dari `packages/shared`) | |
-| 3D | **three.js** + **@react-three/fiber** (web dan native via `expo-gl`) + **@react-three/drei** (web) | Detail di `docs/3D-VIEWER.md` |
+| Styling | **NativeWind 4** (Tailwind 3 untuk React Native) | Mode gelap mengikuti sistem |
+| Data server | **TanStack Query 5** | Cache, refetch, invalidasi dari event realtime |
+| Form | State React + **zod** (skema dari `packages/shared`) lewat helper `src/lib/form.ts` | Pesan galat sama di client dan server |
+| 3D | **three.js** + **@react-three/fiber 9** (web dan native via `expo-gl`) + **@react-three/drei** (OrbitControls web) | Detail di `docs/3D-VIEWER.md` |
 | Realtime | **socket.io-client** | |
-| Login Google | **expo-auth-session** / Google Sign-In, kirim ID token ke API | |
-| Penyimpanan token | **expo-secure-store** (native), memori + refresh via cookie httpOnly (web) | |
+| Login Google | Web: **Google Identity Services**; Android: **@react-native-google-signin/google-signin** | ID token dikirim ke API |
+| Penyimpanan token | **expo-secure-store** (native); web memakai cookie httpOnly | |
 | Push | **expo-notifications** | Android lewat FCM |
 | Build Android | **EAS Build** (`.aab`) dan **EAS Submit** | |
-| Tanggal | **date-fns** + **date-fns-tz** | |
+| Lint | **ESLint** (`eslint-config-expo`) | |
 
 ### 2.2 API (`apps/api`)
 | Kebutuhan | Pilihan | Catatan |
 |---|---|---|
-| Runtime | **Node.js LTS** | Dijalankan dengan **PM2** |
-| Framework | **NestJS** | Struktur modul yang tegas sehingga kerangka proyek tetap konsisten |
-| ORM dan migrasi | **Prisma** (provider `mysql`) | Sumber kebenaran skema: `apps/api/prisma/schema.prisma` |
+| Runtime | **Node.js 22 LTS**, ESM | Dijalankan dengan **PM2** |
+| Framework | **NestJS 12** | Struktur modul yang tegas sehingga kerangka proyek tetap konsisten |
+| ORM dan migrasi | **Prisma 7** (provider `mysql`, driver adapter `@prisma/adapter-mariadb`) | Skema: `apps/api/prisma/schema.prisma`, konfigurasi: `apps/api/prisma7.config.ts` |
 | Database | **MySQL 8**, charset `utf8mb4`, collation `utf8mb4_unicode_ci` | |
-| Realtime | **Socket.IO** lewat NestJS WebSocket Gateway | Room per garasi |
-| Autentikasi | Verifikasi Google ID token (`google-auth-library`), lalu terbitkan **JWT** sendiri | Access token 15 menit, refresh token 30 hari dirotasi |
-| Validasi | **zod** (dari `packages/shared`) | |
+| Realtime | **Socket.IO** lewat NestJS WebSocket Gateway, path `/api/socket.io` | Room per garasi dan per pengguna |
+| Autentikasi | Verifikasi Google ID token (`google-auth-library`), lalu terbitkan **JWT** sendiri (`jose`) | Access token 15 menit, refresh token 30 hari dirotasi |
+| Validasi | **zod 4** (dari `packages/shared`) lewat `ZodValidationPipe` | |
 | Penjadwalan | **@nestjs/schedule** di proses worker terpisah | |
-| Email | **Nodemailer** (SMTP) | Template HTML sederhana |
+| Email | **Nodemailer** (SMTP Google Workspace) | Template HTML sederhana |
 | Push | **expo-server-sdk** | |
-| Unggahan | **Multer** ke disk lokal, gambar dikompres dengan **sharp** | Abstraksi `StorageService` agar bisa pindah ke S3 |
-| Log | **pino** (nestjs-pino) | |
-| Dokumentasi API | **@nestjs/swagger** di `/docs` (non-production) | |
+| Unggahan | **Multer** ke disk lokal, gambar dikompres ke WebP dengan **sharp** | `StorageService`, URL bertanda tangan 1 jam |
+| Keamanan HTTP | **helmet**, **@nestjs/throttler**, CORS terbatas | |
+| Log | Logger bawaan NestJS | Dibaca lewat `pm2 logs` |
+| Lint dan test | **oxlint**, **vitest** | |
 
 ### 2.3 Paket bersama (`packages/shared`)
-- Enum dan tipe domain (`VehicleCategory`, `ServiceAction`, `ComponentStatus`, dll.).
-- Skema zod untuk semua payload API.
-- **Fungsi murni perhitungan status komponen** (`computeComponentStatus`) sesuai `docs/MAINTENANCE-LOGIC.md`, dipakai oleh app (tampilan) dan worker (pengingat).
-- Nama event realtime.
+- Enum dan tipe domain (`VehicleCategory`, `ServiceAction`, `ComponentStatus`, dll.) beserta label Bahasa Indonesia.
+- Skema zod untuk semua payload API dan tipe respons (`api-types.ts`).
+- **Fungsi murni perhitungan status komponen** (`computeComponentStatus`) dan aturan pengingat sesuai `docs/MAINTENANCE-LOGIC.md`, dipakai oleh app (tampilan) dan worker (pengingat).
+- Katalog: komponen dan konten edukasi, interval default, merek dan model, registri model 3D beserta posisi kamera dan titik sentuh.
+- Kontrak realtime (path dan nama event).
+- Dibangun ke `dist/` (ESM). `npm install` di root otomatis membangunnya (`postinstall`).
+
+### 2.4 Tooling
+- **npm 11** dengan workspaces (`packageManager` di `package.json` root). npm 10 punya bug resolver pada dependency proyek ini.
+- Skrip install yang diizinkan dicatat di `allowScripts` (`package.json` root).
 
 ## 3. Struktur repositori
 
 ```
 prime-garage/
 ├─ AGENTS.md, CLAUDE.md, README.md, LICENSE
-├─ package.json              # npm workspaces
+├─ package.json              # npm workspaces + skrip lint/typecheck/test
 ├─ docs/                     # sumber kebenaran desain
+├─ packages/shared/          # tipe, zod, katalog, logika perawatan (src → dist)
 ├─ apps/
 │  ├─ mobile/                # Expo
-│  │  ├─ app/                # rute Expo Router
-│  │  │  ├─ (auth)/login.tsx
-│  │  │  ├─ (app)/index.tsx                 # dashboard garasi
-│  │  │  ├─ (app)/vehicles/new.tsx
-│  │  │  ├─ (app)/vehicles/[id]/index.tsx   # detail + 3D
-│  │  │  ├─ (app)/vehicles/[id]/services/...
-│  │  │  └─ (app)/settings/...
-│  │  ├─ src/
-│  │  │  ├─ features/        # auth, vehicles, viewer3d, services, workshops, reminders
-│  │  │  ├─ components/      # komponen UI umum
-│  │  │  ├─ lib/             # api-client, socket, query-client, storage
-│  │  │  └─ theme/
+│  │  ├─ src/app/            # rute Expo Router
+│  │  │  ├─ login.tsx, privacy.tsx, delete-account.tsx
+│  │  │  └─ (app)/           # butuh login
+│  │  │     ├─ (tabs)/       # index (Garasi), workshops, notifications, settings
+│  │  │     ├─ vehicles/new.tsx
+│  │  │     ├─ vehicles/[id]/index.tsx      # tab 3D, Kondisi, Servis, Info
+│  │  │     ├─ vehicles/[id]/{edit,odometer,rules}.tsx
+│  │  │     ├─ vehicles/[id]/services/{new,[serviceId]}.tsx
+│  │  │     └─ workshops/{new,[workshopId]}.tsx
+│  │  ├─ src/features/       # auth, vehicles, viewer3d, services, workshops
+│  │  ├─ src/components/     # komponen UI umum (ui.tsx)
+│  │  ├─ src/lib/            # api, auth, hooks, realtime, push, upload, form
 │  │  ├─ assets/models/      # file .glb + LICENSES.md
+│  │  ├─ public/             # index.html, manifest.json (PWA), ikon
+│  │  ├─ scripts/            # generator model 3D, server pratinjau SPA
 │  │  └─ app.config.ts, eas.json
 │  └─ api/                   # NestJS
 │     ├─ prisma/schema.prisma, prisma/migrations/, prisma/seed.ts
 │     ├─ src/
-│     │  ├─ modules/         # auth, users, garages, vehicles, catalog, parts,
-│     │  │                   # services, workshops, maintenance, notifications, realtime, storage
-│     │  ├─ common/          # guard, interceptor, filter
+│     │  ├─ modules/         # auth, users, catalog, vehicles, workshops, services, attachments,
+│     │  │                   # maintenance, dashboard, notifications, realtime, mail, health
+│     │  ├─ common/          # guard, pipe, filter, otorisasi garasi, storage, serializer
 │     │  ├─ main.ts          # proses API
 │     │  └─ worker.ts        # proses worker (cron)
+│     ├─ scripts/smoke-test.mjs
 │     └─ ecosystem.config.cjs  # konfigurasi PM2
-└─ packages/
-   └─ shared/                # tipe, zod, logika perawatan
 ```
 
 ## 4. Alur penting
 
 ### 4.1 Login Google
-1. App meminta Google ID token (expo-auth-session / Google Sign-In).
-2. App mengirim `POST /auth/google { idToken }`.
-3. API memverifikasi token dengan `google-auth-library` (cek `aud` sesuai client ID Android dan web).
+1. Web memakai tombol Google Identity Services; Android memakai Google Sign-In native. Keduanya menghasilkan ID token dengan audience **client ID web**.
+2. App mengirim `POST /api/auth/google { idToken }`.
+3. API memverifikasi token dengan `google-auth-library` (audience harus ada di `GOOGLE_CLIENT_IDS`).
 4. API membuat/menemukan `users` dan `user_identities`, membuat garasi pribadi jika belum ada (FR-VEH-01).
-5. API mengembalikan access token (JWT, 15 menit) dan refresh token (acak, disimpan sebagai hash di `refresh_tokens`).
-   - Native: refresh token di `expo-secure-store`.
-   - Web: refresh token di cookie `httpOnly; Secure; SameSite=Strict` pada domain API.
-6. `POST /auth/refresh` merotasi refresh token. Refresh token yang dipakai ulang membatalkan seluruh keluarga token (deteksi pencurian).
+5. API mengembalikan access token (JWT, 15 menit) dan refresh token (acak, disimpan sebagai hash SHA-256 di `refresh_tokens`).
+   - Native (header `X-Client: native`): refresh token di body, disimpan di `expo-secure-store`.
+   - Web: refresh token di cookie `pg_refresh` (`httpOnly; Secure; SameSite=Strict; Path=/api/auth`).
+6. `POST /api/auth/refresh` merotasi refresh token. Refresh token yang dipakai ulang membatalkan seluruh keluarga token (deteksi pencurian).
+7. Untuk development tersedia `POST /api/auth/dev-login` yang hanya aktif jika `AUTH_DEV_LOGIN_ENABLED=true`; API menolak start bila opsi ini aktif di production.
 
 ### 4.2 Realtime
-- Klien membuka koneksi Socket.IO ke `wss://api.<domain>/realtime` dengan access token pada handshake.
-- Server memverifikasi JWT, lalu memasukkan socket ke room `garage:<garageId>` untuk setiap garasi yang diikuti pengguna.
-- Setiap mutasi yang berhasil (create/update/delete kendaraan, odometer, servis, aturan) memancarkan event ke room garasi terkait, contoh:
-  - `vehicle.updated { vehicleId }`
-  - `odometer.created { vehicleId }`
-  - `service.changed { vehicleId, serviceRecordId }`
-  - `notification.created { notificationId }`
-- Event hanya membawa ID. Klien menanggapinya dengan menginvalidasi query TanStack terkait lalu mengambil ulang lewat REST. Ini menjaga otorisasi tetap di REST dan menghindari data ganda.
+- Klien membuka koneksi Socket.IO ke `wss://primegarage.ngiliyun.my.id` dengan path `/api/socket.io` dan access token pada handshake.
+- Server memverifikasi JWT, lalu memasukkan socket ke room `garage:<garageId>` untuk setiap garasi yang diikuti pengguna dan `user:<userId>`.
+- Setiap mutasi yang berhasil memancarkan event ke room terkait: `vehicle.changed`, `odometer.changed`, `service.changed`, `workshop.changed`, `rules.changed`, `notification.created`.
+- Event hanya membawa ID. Klien menanggapinya dengan menginvalidasi query TanStack terkait lalu mengambil ulang lewat REST. Ini menjaga otorisasi tetap di REST.
 - Saat reconnect, klien menginvalidasi semua query aktif (FR-SYNC-02).
+- Worker tidak punya gateway; event dari worker diteruskan ke API lewat `POST /api/internal/realtime` dengan header `x-internal-secret`.
 
 ### 4.3 Pengingat
-- Proses `prime-garage-worker` menjalankan cron setiap hari pukul 07.00 WIB.
+- Proses `prime-garage-worker` menjalankan cron `REMINDER_CRON` (default `0 0 * * *` UTC = 07.00 WIB).
 - Worker menghitung status semua komponen kendaraan aktif dengan `computeComponentStatus` dari `packages/shared`.
-- Notifikasi baru dibuat sesuai aturan di `docs/MAINTENANCE-LOGIC.md` bagian 5, lalu dikirim via Expo Push dan SMTP.
-- Worker dipisah dari API agar API bisa diskalakan tanpa menjalankan cron ganda.
+- Notifikasi baru dibuat sesuai aturan di `docs/MAINTENANCE-LOGIC.md` bagian 5, lalu dikirim sebagai satu ringkasan per pengguna via Expo Push dan SMTP.
+- Jalankan manual: `node dist/worker.js --once` (opsi `--now=<ISO>` untuk simulasi tanggal).
 
 ## 5. Keamanan
-- HTTPS di semua domain (sertifikat Let's Encrypt dari aaPanel).
-- CORS API hanya mengizinkan origin `app.<domain>` (dan origin dev).
+- HTTPS (sertifikat Let's Encrypt dari aaPanel).
+- Web dan API satu origin, sehingga CORS hanya perlu untuk origin development (`CORS_ORIGINS`).
 - Rate limit (`@nestjs/throttler`) pada endpoint auth dan unggahan.
 - Helmet untuk header keamanan.
 - Otorisasi per garasi di setiap service (lihat `docs/DATABASE.md` bagian 4).
-- Unggahan: hanya `image/jpeg`, `image/png`, `image/webp`, maks 5 MB, nama file acak, dilayani lewat endpoint terotorisasi atau URL bertanda tangan berumur pendek.
+- Unggahan: hanya `image/jpeg`, `image/png`, `image/webp`, maks 5 MB, dikonversi ke WebP, nama file UUID, dilayani lewat URL bertanda tangan HMAC yang berlaku 1 jam.
 - User MySQL khusus aplikasi dengan hak terbatas pada database `prime_garage` saja.
 
 ## 6. Architecture Decision Records (ADR)
@@ -178,3 +186,19 @@ prime-garage/
 ### ADR-007: Autentikasi JWT sendiri dengan login sosial
 - **Status**: Diterima
 - **Keputusan**: Penyedia identitas (Google, nanti Facebook/Apple) hanya untuk verifikasi identitas. Sesi dikelola API dengan JWT akses berumur pendek dan refresh token yang dirotasi. Tabel `user_identities` memungkinkan satu pengguna menautkan beberapa penyedia.
+
+### ADR-008: Web dan API dalam satu domain
+- **Status**: Diterima
+- **Konteks**: Pemilik menetapkan domain `primegarage.ngiliyun.my.id`.
+- **Keputusan**: SPA dilayani di `/`, API dan Socket.IO di `/api` pada domain yang sama (Nginx reverse proxy).
+- **Alasan**: Satu sertifikat dan satu situs di aaPanel, tidak perlu CORS di production, cookie refresh `SameSite=Strict` bekerja tanpa pengecualian.
+
+### ADR-009: Model 3D spesifik untuk Honda Supra X 125 dari Sketchfab
+- **Status**: Diterima
+- **Konteks**: Pemilik menyediakan model "Honda Supra x 125" (boiledfish.vvti, CC BY 4.0). Model hanya memisahkan roda, garpu, swing arm, spakbor, dan setang.
+- **Keputusan**: Model dinormalkan dan diberi nama node sesuai konvensi oleh `apps/mobile/scripts/prepare-supra-model.mjs`. Bagian tanpa mesh sendiri (oli, busi, filter udara, aki, dll.) ditandai dengan titik sentuh (hotspot). Model prosedural `underbone_v1` tetap menjadi cadangan otomatis jika model spesifik gagal dimuat di perangkat. Kredit penulis wajib tampil di bawah viewer.
+
+### ADR-010: npm 11 sebagai package manager
+- **Status**: Diterima
+- **Konteks**: npm 10 gagal menyusun dependency tree proyek ini (bug `edgesOut` di resolver).
+- **Keputusan**: Gunakan npm 11 (`npx npm@11 install` atau pasang global `npm i -g npm@11`). Field `packageManager` dan `engines` di root mencatat versinya.

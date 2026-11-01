@@ -249,7 +249,7 @@ erDiagram
 | km | INT UNSIGNED | |
 | recorded_at | DATETIME(3) | |
 | source | ENUM('initial','manual','service') | |
-| service_record_id | CHAR(36) NULL FK → service_records | CASCADE |
+| service_record_id | CHAR(36) NULL UNIQUE FK → service_records | CASCADE; satu log odometer per servis |
 | note | VARCHAR(255) NULL | |
 | created_by | CHAR(36) FK → users | |
 | created_at | DATETIME(3) | |
@@ -304,6 +304,7 @@ erDiagram
 | unit_price | DECIMAL(12,2) NULL | |
 | subtotal | DECIMAL(12,2) NULL | |
 | notes | VARCHAR(255) NULL | |
+| sort_order | SMALLINT | Urutan tampil item |
 | | INDEX(part_code) | Untuk mencari baseline komponen |
 
 **`attachments`**
@@ -375,5 +376,7 @@ Dalam satu transaksi: hapus semua garasi yang dimiliki pengguna (cascade ke kend
 
 - `brands`: Honda, Yamaha, Suzuki, Kawasaki, TVS, Vespa/Piaggio.
 - `vehicle_models`: minimal Honda Supra X 125 FI (kategori `underbone`), ditambah model populer lain secara bertahap.
-- `model_3d_assets`: `underbone_v1`.
+- `model_3d_assets`: `underbone_v1` dan `honda_supra_x_125_fi_v1` (dipakai katalog Supra X 125 dan Supra X 125 FI).
 - `parts`, `model_3d_part_views`, `maintenance_rule_templates`: sesuai `docs/3D-VIEWER.md` dan `docs/MAINTENANCE-LOGIC.md`.
+
+Sumber data seed ada di `packages/shared/src/catalog/`; skrip seed: `apps/api/prisma/seed.ts` (`npm run db:seed`).
