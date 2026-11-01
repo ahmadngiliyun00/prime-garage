@@ -62,7 +62,8 @@ Salin dari `apps/api/.env.example`. Nilai penting:
 | `STORAGE_DIR` | `/www/prime-garage/storage` |
 | `SMTP_*`, `MAIL_FROM` | lihat bagian 0.3 |
 | `INTERNAL_API_URL`, `INTERNAL_API_SECRET` | `http://127.0.0.1:3000`, acak minimal 16 karakter |
-| `REMINDER_CRON` | `0 0 * * *` (07.00 WIB) |
+| `REMINDER_CRON` | `0 7 * * *` (07.00, dibaca dalam `REMINDER_TZ`) |
+| `REMINDER_TZ` | `Asia/Jakarta` (WIB, UTC+7) |
 
 Membuat secret acak:
 

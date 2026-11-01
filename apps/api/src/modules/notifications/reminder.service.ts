@@ -73,7 +73,7 @@ export class ReminderService {
     private readonly realtime: RealtimeService,
   ) {}
 
-  @Cron(env.REMINDER_CRON, { name: 'daily-reminders', timeZone: 'UTC' })
+  @Cron(env.REMINDER_CRON, { name: 'daily-reminders', timeZone: env.REMINDER_TZ })
   async scheduled(): Promise<void> {
     await this.run();
   }

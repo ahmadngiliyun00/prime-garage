@@ -135,7 +135,7 @@ Jika pengguna jarang berkendara sehingga km tidak bertambah, `dueDate` menjadi 1
 
 ## 5. Aturan pengingat (worker)
 
-Worker berjalan setiap hari pukul **07.00 WIB** (00.00 UTC).
+Worker berjalan setiap hari pukul **07.00 WIB** (UTC+7, sama dengan 00.00 UTC). Jadwal diatur lewat `REMINDER_CRON` (default `0 7 * * *`) yang dibaca dalam zona waktu `REMINDER_TZ` (default `Asia/Jakarta`).
 
 1. Untuk setiap kendaraan yang tidak diarsipkan, untuk setiap aturan `is_enabled = true` yang `snoozed_until` kosong atau sudah lewat: hitung status.
 2. Buat baris `notifications` sesuai tabel di bawah untuk setiap anggota garasi. `dedupe_key` (ditambah akhiran `:{userId}`) UNIQUE mencegah duplikat; jika insert gagal karena duplikat, lewati.

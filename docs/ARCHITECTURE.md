@@ -134,7 +134,7 @@ prime-garage/
 - Worker tidak punya gateway; event dari worker diteruskan ke API lewat `POST /api/internal/realtime` dengan header `x-internal-secret`.
 
 ### 4.3 Pengingat
-- Proses `prime-garage-worker` menjalankan cron `REMINDER_CRON` (default `0 0 * * *` UTC = 07.00 WIB).
+- Proses `prime-garage-worker` menjalankan cron `REMINDER_CRON` (default `0 7 * * *`) dalam zona waktu `REMINDER_TZ` (default `Asia/Jakarta`, WIB, UTC+7), jadi pengingat terkirim pukul 07.00 WIB.
 - Worker menghitung status semua komponen kendaraan aktif dengan `computeComponentStatus` dari `packages/shared`.
 - Notifikasi baru dibuat sesuai aturan di `docs/MAINTENANCE-LOGIC.md` bagian 5, lalu dikirim sebagai satu ringkasan per pengguna via Expo Push dan SMTP.
 - Jalankan manual: `node dist/worker.js --once` (opsi `--now=<ISO>` untuk simulasi tanggal).

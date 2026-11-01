@@ -8,6 +8,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 - Viewer 3D tidak lagi crash di iOS dan Android (`process.emitWarning is not a function`): Metro sekarang memakai build ESM `three.module.js`, bukan shim `three.cjs`.
 - Aplikasi tidak lagi crash di Expo Go karena modul native Google Sign-In tidak tersedia; tombol Google diganti pesan dan login pengembang tetap bisa dipakai.
 
+### Diubah
+- Jadwal pengingat harian ditulis langsung dalam WIB: `REMINDER_CRON=0 7 * * *` dengan `REMINDER_TZ=Asia/Jakarta` (UTC+7). Jam kirim tetap 07.00 WIB.
+
 ## [1.0.0] - 2026-11-01
 
 Rilis pertama (MVP) PrimeGarage: garasi digital untuk mencatat riwayat servis, mempelajari bagian kendaraan lewat model 3D, dan memperkirakan kapan komponen perlu diservis.

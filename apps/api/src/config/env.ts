@@ -42,7 +42,20 @@ const schema = z.object({
   EXPO_ACCESS_TOKEN: z.string().optional(),
   INTERNAL_API_URL: z.string().url().optional(),
   INTERNAL_API_SECRET: z.string().min(16).optional(),
-  REMINDER_CRON: z.string().default('0 0 * * *'),
+  /** Daily reminder schedule, evaluated in REMINDER_TZ (default 07:00 WIB). */
+  REMINDER_CRON: z.string().default('0 7 * * *'),
+  /** IANA time zone for REMINDER_CRON. Asia/Jakarta = WIB = UTC+7 (no daylight saving). */
+  REMINDER_TZ: z
+    .string()
+    .default('Asia/Jakarta')
+    .refine((tz) => {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: tz });
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'REMINDER_TZ must be a valid IANA time zone, for example Asia/Jakarta'),
   TRUST_PROXY: bool,
 });
 
