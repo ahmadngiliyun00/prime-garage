@@ -38,7 +38,7 @@ Versi di bawah adalah versi saat scaffold (1 November 2026). Upgrade versi minor
 | Form | State React + **zod** (skema dari `packages/shared`) lewat helper `src/lib/form.ts` | Pesan galat sama di client dan server |
 | 3D | **three.js** + **@react-three/fiber 9** (web dan native via `expo-gl`) + **@react-three/drei** (OrbitControls web) | Detail di `docs/3D-VIEWER.md` |
 | Realtime | **socket.io-client** | |
-| Login | Username dan password (form biasa). Google (nonaktif): Web **Google Identity Services**, Android **@react-native-google-signin/google-signin** | Lihat ADR-011 |
+| Login | Username dan password (form biasa); GitHub OAuth lewat API dengan **expo-web-browser** (`openAuthSessionAsync`) di native. Google (nonaktif): Web **Google Identity Services**, Android **@react-native-google-signin/google-signin** | Lihat ADR-011 |
 | Penyimpanan token | **expo-secure-store** (native); web memakai cookie httpOnly | |
 | Push | **expo-notifications** | Android lewat FCM |
 | Build Android | **EAS Build** (`.aab`) dan **EAS Submit** | |
@@ -120,6 +120,14 @@ prime-garage/
 2. App mengirim `POST /api/auth/login { username, password }`; `username` boleh diisi email.
 3. API memverifikasi hash scrypt (`users.password_hash`, format `scrypt$N$r$p$salt$hash`) secara constant-time. Username yang tidak ada tetap diverifikasi terhadap hash palsu agar waktunya sama. Pesan galat selalu "Username atau password salah".
 4. Endpoint ini dibatasi 5 percobaan per menit per IP.
+
+**GitHub (FR-AUTH-10, ADR-012)**
+1. App membuka `GET /api/auth/github/start?returnTo=<url>`. Web: redirect satu halaman, `returnTo` = `<origin>/auth/github`. Native: `WebBrowser.openAuthSessionAsync`, `returnTo` = `Linking.createURL('auth/github')` (`primegarage://auth/github`, atau `exp://...` di Expo Go).
+2. API memeriksa `returnTo` (hanya `APP_WEB_URL`, `CORS_ORIGINS`, skema `primegarage://`, dan `exp://` di luar production), membuat `state` (JWT HS256, 10 menit, berisi `returnTo` dan nonce), menyimpan nonce di cookie `pg_gh_nonce` (`httpOnly; SameSite=Lax; Path=/api/auth/github`), lalu redirect ke GitHub dengan `redirect_uri` = `<API_PUBLIC_URL>/api/auth/github/callback` dan scope `read:user user:email`.
+3. `GET /api/auth/github/callback`: state dan nonce dicocokkan (mencegah CSRF login), code ditukar dengan client secret di server, lalu `/user` dan `/user/emails` dibaca. Login GitHub harus ada di `GITHUB_ALLOWED_LOGINS`, dan email yang dipakai harus terverifikasi.
+4. API membuat atau menemukan `users` dan `user_identities` (`provider = github`, `provider_user_id` = ID numerik GitHub). Jika email sama dengan akun yang sudah ada (misalnya akun password), identitas GitHub ditautkan ke akun itu.
+5. API redirect ke `returnTo?code=<kode sekali pakai>` (atau `?error=<pesan>`). Kode berlaku 2 menit, disimpan di memori proses API (aman karena API satu instance, ADR-005).
+6. App menukar kode lewat `POST /api/auth/github/exchange { code }` dan menerima sesi seperti cara login lain.
 
 **Google (nonaktif, untuk nanti)**
 1. Web memakai tombol Google Identity Services; Android memakai Google Sign-In native. Keduanya menghasilkan ID token dengan audience **client ID web**.
@@ -218,3 +226,9 @@ prime-garage/
 - **Konteks**: Aplikasi untuk sementara dipakai pemilik sendiri. Login Google butuh OAuth client, SHA-1, dan development build, serta tidak bisa dipakai di Expo Go.
 - **Keputusan**: Login utama memakai username dan password. Hash memakai scrypt bawaan Node, jadi tidak ada dependency baru. Tidak ada pendaftaran publik: akun dibuat lewat CLI di server. Kode login Google tetap ada dan otomatis tersembunyi selama belum dikonfigurasi (FR-AUTH-09).
 - **Konsekuensi**: Pengguna baru hanya bisa ditambahkan oleh pemilik. Jika aplikasi dibuka untuk umum, perlu pendaftaran, verifikasi email, dan lupa password.
+
+### ADR-012: Login GitHub lewat server
+- **Status**: Diterima (keputusan pemilik, 1 November 2026)
+- **Konteks**: Pemilik ingin login dengan akun GitHub. GitHub OAuth App hanya punya satu callback URL dan butuh client secret, sehingga alur PKCE langsung dari app tidak cocok untuk web dan native sekaligus.
+- **Keputusan**: Seluruh pertukaran OAuth terjadi di API (`/api/auth/github/start`, `/callback`, `/exchange`). App hanya menerima kode sekali pakai lalu menukarnya dengan sesi biasa. Satu callback URL melayani web, Android, iOS, dan Expo Go. Akses dibatasi oleh `GITHUB_ALLOWED_LOGINS`.
+- **Konsekuensi**: `API_PUBLIC_URL` harus bisa dijangkau browser perangkat (di HP saat development: IP LAN komputer, dengan `HOST=0.0.0.0`). Kode sekali pakai disimpan di memori, jadi API harus tetap satu instance (ADR-005).

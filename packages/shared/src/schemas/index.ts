@@ -47,6 +47,12 @@ export const passwordLoginSchema = z.object({
 });
 export type PasswordLoginInput = z.infer<typeof passwordLoginSchema>;
 
+export const githubExchangeSchema = z.object({
+  /** One-time code the API put on the return URL after the GitHub callback. */
+  code: z.string().min(20).max(200),
+});
+export type GithubExchangeInput = z.infer<typeof githubExchangeSchema>;
+
 export const devLoginSchema = z.object({
   email: z.email(),
   name: z.string().trim().min(1).max(120),

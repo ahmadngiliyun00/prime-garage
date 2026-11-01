@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import type { IdentityProvider, User } from '../../generated/prisma/client.js';
 import { ensurePersonalGarage } from './accounts.js';
 import { getDummyHash, verifyPassword } from './password.js';
+import { GithubService } from './github.service.js';
 import { TokenService, type IssuedTokens } from './token.service.js';
 
 type Profile = { provider: IdentityProvider; providerUserId: string; email: string; name: string; avatarUrl: string | null };
@@ -18,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
+    private readonly github: GithubService,
   ) {}
 
   async loginWithGoogle(idToken: string, meta: { userAgent?: string; ip?: string }): Promise<{ user: User; tokens: IssuedTokens }> {
@@ -61,6 +63,27 @@ export class AuthService {
       return u;
     });
     return { user: updated, tokens: await this.tokens.issue({ id: updated.id, email: updated.email }, meta) };
+  }
+
+  /** GitHub callback: loads the profile, signs the user in and returns a one-time code for the client. */
+  async githubCallback(code: string): Promise<string> {
+    const profile = await this.github.profileFromCode(code);
+    const user = await this.upsertUser({
+      provider: 'github',
+      providerUserId: profile.id,
+      email: profile.email,
+      name: profile.name,
+      avatarUrl: profile.avatarUrl,
+    });
+    return this.github.codes.create(user.id);
+  }
+
+  /** Trades the one-time code from the GitHub callback for a session. */
+  async githubExchange(code: string, meta: { userAgent?: string; ip?: string }) {
+    const userId = this.github.codes.consume(code);
+    if (!userId) throw new UnauthorizedException('Kode login GitHub tidak valid atau kedaluwarsa, silakan ulangi');
+    const user = await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+    return { user, tokens: await this.tokens.issue({ id: user.id, email: user.email }, meta) };
   }
 
   /** Development-only login without Google (AUTH_DEV_LOGIN_ENABLED=true, never in production). */

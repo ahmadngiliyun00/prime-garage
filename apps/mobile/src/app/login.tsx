@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, Redirect } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 import { passwordLoginSchema } from '@prime-garage/shared';
 import { Body, Button, Card, Field, Muted, Screen, Title } from '@/components/ui';
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton';
-import { errorMessage } from '@/lib/api';
+import { startGithubLogin } from '@/features/auth/github';
+import { errorMessage, http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { GOOGLE_WEB_CLIENT_ID, SHOW_DEV_LOGIN } from '@/lib/config';
 
@@ -18,6 +20,12 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [signingIn, setSigningIn] = useState(false);
+  const [githubBusy, setGithubBusy] = useState(false);
+  const authConfig = useQuery({
+    queryKey: ['auth-config'],
+    queryFn: () => http.get<{ githubEnabled?: boolean }>('/auth/config'),
+    staleTime: 5 * 60_000,
+  });
 
   const onIdToken = useCallback(
     async (idToken: string) => {
@@ -44,6 +52,21 @@ export default function LoginScreen() {
       setError(errorMessage(e));
     } finally {
       setSigningIn(false);
+    }
+  };
+
+  const githubLogin = async () => {
+    setGithubBusy(true);
+    setError(null);
+    try {
+      const result = await startGithubLogin();
+      if (!result || result.type === 'cancelled') return;
+      if (result.type === 'error') throw new Error(result.message);
+      await auth.exchangeGithubCode(result.code);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setGithubBusy(false);
     }
   };
 
@@ -94,6 +117,16 @@ export default function LoginScreen() {
           testID="login-password"
         />
         <Button title="Masuk" icon="log-in-outline" onPress={passwordLogin} loading={signingIn} testID="password-login" />
+        {authConfig.data?.githubEnabled ? (
+          <>
+            <View className="my-4 flex-row items-center gap-3">
+              <View className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              <Muted>atau</Muted>
+              <View className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            </View>
+            <Button title="Masuk dengan GitHub" icon="logo-github" variant="secondary" onPress={githubLogin} loading={githubBusy} testID="github-login" />
+          </>
+        ) : null}
         {GOOGLE_WEB_CLIENT_ID ? (
           <View className="mt-3">
             <GoogleSignInButton onIdToken={onIdToken} onError={onError} />

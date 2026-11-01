@@ -16,6 +16,7 @@ datasource db {
 
 enum IdentityProvider {
   google
+  github
   facebook
   apple
   email

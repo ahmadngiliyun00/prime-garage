@@ -70,8 +70,8 @@ erDiagram
 |---|---|---|
 | id | CHAR(36) PK | |
 | user_id | CHAR(36) FK → users | CASCADE |
-| provider | ENUM('google','facebook','apple','email') | |
-| provider_user_id | VARCHAR(191) | `sub` dari Google |
+| provider | ENUM('google','github','facebook','apple','email') | |
+| provider_user_id | VARCHAR(191) | `sub` dari Google, ID numerik GitHub |
 | email | VARCHAR(191) NULL | |
 | created_at | DATETIME(3) | |
 | | UNIQUE(provider, provider_user_id) | |

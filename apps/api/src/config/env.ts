@@ -26,6 +26,13 @@ const schema = z.object({
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(30),
   GOOGLE_CLIENT_IDS: list,
+  /** GitHub OAuth App (Settings > Developer settings > OAuth Apps). Both set = GitHub login on. */
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  /** GitHub usernames allowed to sign in (comma separated). Empty = nobody, GitHub login refuses everyone. */
+  GITHUB_ALLOWED_LOGINS: list.transform((v) => v.map((s) => s.toLowerCase())),
+  /** Public base URL of this API, used for the OAuth callback (`<url>/api/auth/github/callback`). */
+  API_PUBLIC_URL: z.string().url().default('http://localhost:3000'),
   CORS_ORIGINS: list,
   APP_WEB_URL: z.string().url().default('http://localhost:8081'),
   AUTH_DEV_LOGIN_ENABLED: bool,

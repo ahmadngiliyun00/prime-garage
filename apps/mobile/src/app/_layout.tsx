@@ -24,6 +24,7 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(app)" options={{ headerShown: false }} />
             <Stack.Screen name="login" options={{ headerShown: false, title: 'Masuk' }} />
+            <Stack.Screen name="auth/github" options={{ headerShown: false, title: 'Masuk dengan GitHub' }} />
             <Stack.Screen name="privacy" options={{ title: 'Kebijakan Privasi' }} />
             <Stack.Screen name="delete-account" options={{ title: 'Hapus Akun' }} />
           </Stack>

@@ -5,6 +5,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 ## [Unreleased]
 
 ### Ditambahkan
+- Login dengan GitHub di web, Android, dan Expo Go. Pertukaran OAuth di server, hanya akun di `GITHUB_ALLOWED_LOGINS` yang bisa masuk (FR-AUTH-10, ADR-012).
 - Login dengan username (atau email) dan password. Akun dibuat dan password direset lewat `npm run user:password -w @prime-garage/api` (FR-AUTH-01, ADR-011).
 
 ### Diperbaiki

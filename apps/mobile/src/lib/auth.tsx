@@ -11,6 +11,7 @@ type AuthState =
 type AuthContextValue = AuthState & {
   signInWithPassword: (username: string, password: string) => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
+  exchangeGithubCode: (code: string) => Promise<void>;
   devLogin: (email: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   setUser: (user: UserDto) => void;
@@ -40,6 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await applySession(await http.post<AuthResponse>('/auth/google', { idToken }));
   }, []);
 
+  const exchangeGithubCode = useCallback(async (code: string) => {
+    await applySession(await http.post<AuthResponse>('/auth/github/exchange', { code }));
+  }, []);
+
   const devLogin = useCallback(async (email: string, name: string) => {
     await applySession(await http.post<AuthResponse>('/auth/dev-login', { email, name }));
   }, []);
@@ -58,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setUser = useCallback((user: UserDto) => setState({ status: 'signedIn', user }), []);
 
   const value = useMemo(
-    () => ({ ...state, signInWithPassword, signInWithGoogle, devLogin, signOut, setUser }),
-    [state, signInWithPassword, signInWithGoogle, devLogin, signOut, setUser],
+    () => ({ ...state, signInWithPassword, signInWithGoogle, exchangeGithubCode, devLogin, signOut, setUser }),
+    [state, signInWithPassword, signInWithGoogle, exchangeGithubCode, devLogin, signOut, setUser],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

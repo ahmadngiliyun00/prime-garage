@@ -27,7 +27,14 @@ mkdir -p /www/prime-garage/storage
 git clone https://github.com/ahmadngiliyun00/prime-garage.git /www/prime-garage/app
 ```
 
-### 0.2 Google OAuth (Google Cloud Console)
+### 0.2 GitHub OAuth App (login GitHub)
+1. Buka https://github.com/settings/developers > **OAuth Apps** > **New OAuth App**.
+2. Homepage URL: `https://primegarage.ngiliyun.my.id`. Authorization callback URL: `https://primegarage.ngiliyun.my.id/api/auth/github/callback`.
+3. Salin **Client ID**, buat **Client secret**, lalu isi di `apps/api/.env`: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_ALLOWED_LOGINS=ahmadngiliyun00`, `API_PUBLIC_URL=https://primegarage.ngiliyun.my.id`.
+4. Untuk development buat OAuth App kedua (satu OAuth App hanya punya satu callback URL), misalnya callback `http://localhost:3000/api/auth/github/callback`. Untuk mencoba dari HP, pakai IP LAN komputer: callback `http://<ip-lan>:3000/api/auth/github/callback`, lalu set `API_PUBLIC_URL=http://<ip-lan>:3000` dan `HOST=0.0.0.0` di API, serta `EXPO_PUBLIC_API_URL=http://<ip-lan>:3000` di app.
+5. Tombol "Masuk dengan GitHub" muncul otomatis setelah `GITHUB_CLIENT_ID` dan `GITHUB_CLIENT_SECRET` terisi.
+
+### 0.2b Google OAuth (Google Cloud Console, ditunda, FR-AUTH-09)
 1. Buat project, lalu **OAuth consent screen** (External, nama aplikasi PrimeGarage, domain `ngiliyun.my.id`, tautan kebijakan privasi `https://primegarage.ngiliyun.my.id/privacy`).
 2. **Credentials > OAuth client ID > Web application**: Authorized JavaScript origins `https://primegarage.ngiliyun.my.id` (tambahkan `http://localhost:8081` untuk development). Catat client ID ini sebagai **client ID web**.
 3. **Credentials > OAuth client ID > Android**: package `my.id.ngiliyun.primegarage`, SHA-1 dari EAS (`eas credentials`) dan dari Play Console (App signing key) setelah aplikasi diunggah.
@@ -55,7 +62,10 @@ Salin dari `apps/api/.env.example`. Nilai penting:
 | `TRUST_PROXY` | `true` |
 | `DATABASE_URL` | `mysql://pg_user:<password>@127.0.0.1:3306/prime_garage` |
 | `JWT_ACCESS_SECRET` | acak minimal 32 karakter |
-| `GOOGLE_CLIENT_IDS` | client ID web dan Android, dipisah koma |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | dari GitHub OAuth App (bagian 0.2) |
+| `GITHUB_ALLOWED_LOGINS` | `ahmadngiliyun00` |
+| `API_PUBLIC_URL` | `https://primegarage.ngiliyun.my.id` |
+| `GOOGLE_CLIENT_IDS` | kosongkan selama login Google ditunda |
 | `APP_WEB_URL` | `https://primegarage.ngiliyun.my.id` |
 | `CORS_ORIGINS` | `https://primegarage.ngiliyun.my.id` |
 | `AUTH_DEV_LOGIN_ENABLED` | `false` (API menolak start jika `true` di production) |
@@ -225,7 +235,7 @@ npx eas-cli@latest submit -p android --profile production
 - [x] `applicationId` final: `my.id.ngiliyun.primegarage`. **Tidak bisa diubah setelah rilis.**
 - [ ] Akun Google Play Console aktif. Akun developer personal baru wajib menjalankan **closed testing** dengan sejumlah tester selama periode tertentu sebelum boleh rilis produksi; cek syarat terbaru di Play Console.
 - [ ] Play App Signing aktif (dikelola EAS credentials).
-- [ ] SHA-1 sertifikat signing didaftarkan di OAuth client Android (bagian 0.2).
+- [ ] SHA-1 sertifikat signing didaftarkan di OAuth client Android (bagian 0.2b, hanya jika login Google diaktifkan).
 - [ ] Kredensial FCM diunggah ke EAS (bagian 0.4).
 - [ ] Ikon 512×512 (`apps/mobile/public/logo512.png`), feature graphic 1024×500, minimal 2 screenshot HP.
 - [ ] Deskripsi singkat dan lengkap (Bahasa Indonesia).
