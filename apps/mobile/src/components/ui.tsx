@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
   type TextInputProps,
+  useColorScheme,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COMPONENT_STATUS_COLORS, COMPONENT_STATUS_LABELS, type ComponentStatus } from '@prime-garage/shared';
@@ -112,6 +113,7 @@ export function Button({
   testID?: string;
 }) {
   const s = BUTTON_STYLES[variant];
+  const dark = useColorScheme() === 'dark';
   return (
     <Pressable
       testID={testID}
@@ -123,7 +125,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={s.spinner} size="small" />
       ) : icon ? (
-        <Ionicons name={icon} size={small ? 16 : 18} color={variant === 'primary' ? '#fff' : variant === 'danger' ? '#b91c1c' : variant === 'ghost' ? '#dc2626' : '#334155'} />
+        <Ionicons name={icon} size={small ? 16 : 18} color={variant === 'primary' ? '#fff' : variant === 'danger' ? '#b91c1c' : variant === 'ghost' ? '#dc2626' : dark ? '#cbd5e1' : '#334155'} />
       ) : null}
       <Text className={`${small ? 'text-sm' : 'text-base'} font-semibold ${s.text}`}>{title}</Text>
     </Pressable>
