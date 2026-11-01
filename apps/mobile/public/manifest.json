@@ -1,0 +1,16 @@
+{
+  "short_name": "PrimeGarage",
+  "name": "PrimeGarage: Servis Kendaraan",
+  "description": "Pantau kondisi kendaraanmu, servis tepat waktu.",
+  "lang": "id",
+  "icons": [
+    { "src": "/logo192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/logo512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "/logo512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#dc2626",
+  "background_color": "#0f172a"
+}
