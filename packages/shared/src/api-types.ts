@@ -126,6 +126,8 @@ export type RuleDto = {
 
 export type ComponentStatusDto = ComponentStatusResult & {
   partName: string;
+  intervalKm: number | null;
+  intervalMonths: number | null;
   isEnabled: boolean;
   snoozedUntil: string | null;
 };

@@ -91,6 +91,8 @@ export class MaintenanceService {
         return {
           ...result,
           partName: getPart(rule.partCode)?.name ?? rule.partCode,
+          intervalKm: rule.intervalKm,
+          intervalMonths: rule.intervalMonths,
           isEnabled: rule.isEnabled,
           snoozedUntil: dateOnlyToString(rule.snoozedUntil),
         };
