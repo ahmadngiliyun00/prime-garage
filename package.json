@@ -1,0 +1,29 @@
+{
+  "name": "prime-garage",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PrimeGarage: garasi digital untuk riwayat servis dan estimasi umur komponen kendaraan",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12",
+    "npm": ">=11"
+  },
+  "scripts": {
+    "postinstall": "npm run build -w @prime-garage/shared",
+    "build:shared": "npm run build -w @prime-garage/shared",
+    "build:api": "npm run build -w @prime-garage/api",
+    "build:web": "npm run build:web -w @prime-garage/mobile",
+    "dev:api": "npm run start:dev -w @prime-garage/api",
+    "dev:worker": "npm run start:worker:dev -w @prime-garage/api",
+    "dev:mobile": "npm run start -w @prime-garage/mobile",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "generate:model": "npm run generate:model -w @prime-garage/mobile"
+  },
+  "packageManager": "npm@11.21.1"
+}
