@@ -13,6 +13,7 @@ import { Body, Button, Card, EmptyState, ErrorState, Heading, Loading, Muted, St
 import { absoluteUrl, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useDashboard } from '@/lib/hooks';
+import { BRAND } from '@/lib/theme';
 
 function Count({ value, label, color }: { value: number; label: string; color: string }) {
   return (
@@ -35,7 +36,7 @@ function VehicleCard({ item }: { item: DashboardVehicleDto }) {
           <Image source={{ uri: photo }} className="h-14 w-14 rounded-xl" />
         ) : (
           <View className="h-14 w-14 items-center justify-center rounded-xl bg-brand-50 dark:bg-slate-800">
-            <Ionicons name="bicycle-outline" size={28} color="#dc2626" />
+            <Ionicons name="bicycle-outline" size={28} color={BRAND.orangeStrong} />
           </View>
         )}
         <View className="flex-1">
@@ -46,7 +47,7 @@ function VehicleCard({ item }: { item: DashboardVehicleDto }) {
           </Muted>
           <Muted>Odometer {formatKm(vehicle.currentOdometerKm)}</Muted>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+        <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
       </View>
 
       <View className="mt-3 flex-row gap-2">

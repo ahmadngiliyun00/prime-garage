@@ -17,9 +17,9 @@ export default function RootLayout() {
           <StatusBar style={dark ? 'light' : 'dark'} />
           <Stack
             screenOptions={{
-              headerTintColor: dark ? '#fff' : '#0f172a',
-              headerStyle: { backgroundColor: dark ? '#020617' : '#ffffff' },
-              contentStyle: { backgroundColor: dark ? '#020617' : '#f8fafc' },
+              headerTintColor: dark ? '#fff' : '#171717',
+              headerStyle: { backgroundColor: dark ? '#0a0a0a' : '#ffffff' },
+              contentStyle: { backgroundColor: dark ? '#0a0a0a' : '#fafafa' },
               headerBackTitle: 'Kembali',
             }}
           >

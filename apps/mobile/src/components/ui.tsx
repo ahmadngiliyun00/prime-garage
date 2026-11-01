@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COMPONENT_STATUS_COLORS, COMPONENT_STATUS_LABELS, type ComponentStatus } from '@prime-garage/shared';
+import { BRAND } from '@/lib/theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -85,9 +86,9 @@ const BUTTON_STYLES: Record<ButtonVariant, { box: string; text: string; spinner:
   secondary: {
     box: 'border border-slate-300 bg-white active:bg-slate-100 dark:border-slate-700 dark:bg-slate-900',
     text: 'text-slate-800 dark:text-slate-100',
-    spinner: '#334155',
+    spinner: '#404040',
   },
-  ghost: { box: 'bg-transparent active:bg-slate-100 dark:active:bg-slate-800', text: 'text-brand-600', spinner: '#dc2626' },
+  ghost: { box: 'bg-transparent active:bg-slate-100 dark:active:bg-slate-800', text: 'text-brand-600', spinner: BRAND.orangeStrong },
   danger: { box: 'bg-red-50 border border-red-200 active:bg-red-100 dark:bg-red-950 dark:border-red-900', text: 'text-red-700 dark:text-red-300', spinner: '#b91c1c' },
 };
 
@@ -125,14 +126,14 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={s.spinner} size="small" />
       ) : icon ? (
-        <Ionicons name={icon} size={small ? 16 : 18} color={variant === 'primary' ? '#fff' : variant === 'danger' ? '#b91c1c' : variant === 'ghost' ? '#dc2626' : dark ? '#cbd5e1' : '#334155'} />
+        <Ionicons name={icon} size={small ? 16 : 18} color={variant === 'primary' ? '#fff' : variant === 'danger' ? '#b91c1c' : variant === 'ghost' ? BRAND.orangeStrong : dark ? '#d4d4d4' : '#404040'} />
       ) : null}
       <Text className={`${small ? 'text-sm' : 'text-base'} font-semibold ${s.text}`}>{title}</Text>
     </Pressable>
   );
 }
 
-export function IconButton({ icon, onPress, label, color = '#334155' }: { icon: IconName; onPress: () => void; label: string; color?: string }) {
+export function IconButton({ icon, onPress, label, color = '#404040' }: { icon: IconName; onPress: () => void; label: string; color?: string }) {
   return (
     <Pressable accessibilityLabel={label} onPress={onPress} hitSlop={8} className="rounded-full p-2 active:bg-slate-200 dark:active:bg-slate-800">
       <Ionicons name={icon} size={22} color={color} />
@@ -152,7 +153,7 @@ export function Field({
       <Text className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">{label}</Text>
       <TextInput
         accessibilityLabel={label}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor="#a3a3a3"
         className={`rounded-xl border bg-white px-3 py-3 text-base text-slate-900 dark:bg-slate-900 dark:text-white ${error ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'}`}
         {...props}
       />
@@ -202,7 +203,7 @@ export function Select<T extends string | number>({
         <Text className={`flex-1 text-base ${selected ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`} numberOfLines={1}>
           {selected?.label ?? placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color="#64748b" />
+        <Ionicons name="chevron-down" size={18} color="#737373" />
       </Pressable>
       {error ? <Text className="mt-1 text-sm text-red-600">{error}</Text> : null}
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
@@ -220,7 +221,7 @@ export function Select<T extends string | number>({
               value={query}
               onChangeText={setQuery}
               placeholder="Cari..."
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#a3a3a3"
               className="mx-4 mt-3 rounded-xl border border-slate-300 px-3 py-2 text-base text-slate-900 dark:border-slate-700 dark:text-white"
             />
           ) : null}
@@ -254,7 +255,7 @@ export function SwitchRow({ label, description, value, onChange }: { label: stri
         <Body>{label}</Body>
         {description ? <Muted>{description}</Muted> : null}
       </View>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: '#dc2626' }} />
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: BRAND.orangeStrong }} />
     </View>
   );
 }
@@ -282,7 +283,7 @@ export function ProgressBar({ percent, color }: { percent: number; color: string
 export function Loading({ label = 'Memuat...' }: { label?: string }) {
   return (
     <View className="items-center justify-center p-10">
-      <ActivityIndicator color="#dc2626" />
+      <ActivityIndicator color={BRAND.orangeStrong} />
       <Muted className="mt-2">{label}</Muted>
     </View>
   );
@@ -291,7 +292,7 @@ export function Loading({ label = 'Memuat...' }: { label?: string }) {
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <View className="items-center p-8">
-      <Ionicons name="cloud-offline-outline" size={36} color="#94a3b8" />
+      <Ionicons name="cloud-offline-outline" size={36} color="#a3a3a3" />
       <Body className="mt-2 text-center">{message}</Body>
       {onRetry ? <Button title="Coba lagi" variant="secondary" onPress={onRetry} className="mt-3" small /> : null}
     </View>
@@ -301,7 +302,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 export function EmptyState({ icon, title, message, action }: { icon: IconName; title: string; message: string; action?: ReactNode }) {
   return (
     <View className="items-center rounded-2xl border border-dashed border-slate-300 p-8 dark:border-slate-700">
-      <Ionicons name={icon} size={40} color="#94a3b8" />
+      <Ionicons name={icon} size={40} color="#a3a3a3" />
       <Heading className="mt-3 text-center">{title}</Heading>
       <Muted className="mt-1 text-center">{message}</Muted>
       {action ? <View className="mt-4">{action}</View> : null}
@@ -348,7 +349,7 @@ export function SegmentedTabs<T extends string>({
           onPress={() => onChange(t.value)}
           className={`flex-1 flex-row items-center justify-center gap-1 rounded-lg py-2 ${t.value === value ? 'bg-white dark:bg-slate-950' : ''}`}
         >
-          <Ionicons name={t.icon} size={16} color={t.value === value ? '#dc2626' : '#64748b'} />
+          <Ionicons name={t.icon} size={16} color={t.value === value ? BRAND.orangeStrong : '#737373'} />
           <Text className={`text-sm ${t.value === value ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-500'}`}>{t.label}</Text>
         </Pressable>
       ))}

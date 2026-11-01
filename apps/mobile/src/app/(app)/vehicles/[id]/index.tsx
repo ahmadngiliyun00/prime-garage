@@ -36,6 +36,7 @@ import { confirm, notify } from '@/lib/dialogs';
 import { useArchiveVehicle, useComponents, useDeleteVehicle, useParts, useServices, useVehicle } from '@/lib/hooks';
 import { queryClient, qk } from '@/lib/query-client';
 import { uploadImage } from '@/lib/upload';
+import { BRAND } from '@/lib/theme';
 
 type Tab = '3d' | 'condition' | 'services' | 'info';
 
@@ -127,7 +128,7 @@ function ConditionTab({ vehicle, components, loading }: { vehicle: VehicleDto; c
       {stale ? (
         <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-slate-900">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="speedometer-outline" size={20} color="#2563eb" />
+            <Ionicons name="speedometer-outline" size={20} color={BRAND.orangeStrong} />
             <Body className="flex-1">Odometer belum diperbarui lebih dari 14 hari. Angka di bawah memakai perkiraan.</Body>
           </View>
           <Button title="Perbarui odometer" small className="mt-3" onPress={() => router.push(`/vehicles/${vehicle.id}/odometer`)} />

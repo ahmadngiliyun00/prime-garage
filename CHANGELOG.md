@@ -15,6 +15,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 - Aplikasi tidak lagi crash di Expo Go karena modul native Google Sign-In tidak tersedia; tombol Google diganti pesan dan login pengembang tetap bisa dipakai.
 
 ### Diubah
+- Warna aplikasi mengikuti logo: oranye sebagai warna utama, putih, dan hitam. Tema gelap kini hitam netral, bukan biru gelap. Warna tema PWA dan notifikasi Android ikut oranye.
 - Login Google ditunda dan tombolnya disembunyikan selama belum dikonfigurasi (FR-AUTH-09).
 - Jadwal pengingat harian ditulis langsung dalam WIB: `REMINDER_CRON=0 7 * * *` dengan `REMINDER_TZ=Asia/Jakarta` (UTC+7). Jam kirim tetap 07.00 WIB.
 

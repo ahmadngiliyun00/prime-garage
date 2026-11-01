@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { modelAssetFor } from './model-assets';
 import { CameraRig, Stage, VehicleModel } from './scene';
 import type { Viewer3DProps } from './types';
+import { BRAND } from '@/lib/theme';
 
 const LOAD_TIMEOUT_MS = 10_000;
 const MIN_RADIUS = 0.5;
@@ -156,7 +157,7 @@ export function Viewer3D(props: Viewer3DProps) {
       </Canvas>
       {!loaded ? (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }} pointerEvents="none">
-          <ActivityIndicator color="#dc2626" />
+          <ActivityIndicator color={BRAND.orangeStrong} />
         </View>
       ) : null}
     </View>

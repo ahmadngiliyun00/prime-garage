@@ -10,7 +10,7 @@ const ICONS: Record<NotificationDto['type'], { name: 'alert-circle' | 'time' | '
   component_due: { name: 'alert-circle', color: '#dc2626' },
   component_soon: { name: 'time', color: '#eab308' },
   odometer_stale: { name: 'speedometer', color: '#2563eb' },
-  system: { name: 'information-circle', color: '#64748b' },
+  system: { name: 'information-circle', color: '#737373' },
 };
 
 /** FR-NTF-06: in-app notification center. */

@@ -5,6 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { http } from './api';
+import { BRAND } from '@/lib/theme';
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -28,7 +29,7 @@ async function register(): Promise<void> {
       name: 'Pengingat servis',
       // eslint-disable-next-line import/namespace -- re-exported enum the import plugin cannot resolve
       importance: Notifications.AndroidImportance.HIGH,
-      lightColor: '#dc2626',
+      lightColor: BRAND.orangeStrong,
     });
   }
   const current = await Notifications.getPermissionsAsync();

@@ -36,7 +36,7 @@ export default function WorkshopsScreen() {
                 {w.city || w.address ? <Body className="mt-1">{[w.address, w.city].filter(Boolean).join(', ')}</Body> : null}
                 <Muted className="mt-1">{w.serviceCount ?? 0} kali servis</Muted>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+              <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
             </View>
           </Card>
         ))

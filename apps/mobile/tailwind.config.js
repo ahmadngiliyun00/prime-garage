@@ -8,13 +8,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Logo orange (src/lib/theme.ts)
         brand: {
-          50: '#fef2f2',
-          100: '#fee2e2',
-          500: '#ef4444',
-          600: '#dc2626',
-          700: '#b91c1c',
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          500: '#ff7a00',
+          600: '#ea6a00',
+          700: '#c25700',
         },
+        // Neutral grays instead of the blue-tinted slate, so dark mode is black (brand: orange, white, black).
+        slate: require('tailwindcss/colors').neutral,
       },
     },
   },

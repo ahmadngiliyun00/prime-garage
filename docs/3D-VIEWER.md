@@ -45,7 +45,7 @@ Kode viewer berada di `apps/mobile/src/features/viewer3d/` dengan pemisahan file
 
 Aturan seleksi: saat mesh disentuh, telusuri ke atas (mesh lalu parent-nya) sampai menemukan node bernama `part__*`; ambil `part_code` dari nama tersebut (buang akhiran `__<n>` atau `__hs<n>`). Penelusuran **berhenti** di node `body__*`. Jika mesh terdekat yang tersentuh tidak punya kode bagian, event diteruskan ke mesh berikutnya di sepanjang sinar, sehingga titik sentuh di balik panel bodi tetap bisa dipilih.
 
-Titik sentuh dirender selalu di atas bodi (tanpa depth test) agar bagian tersembunyi seperti oli dan busi mudah ditemukan. Saat sebuah bagian terpilih, titiknya berubah merah dan membesar, titik lain meredup.
+Titik sentuh dirender selalu di atas bodi (tanpa depth test) agar bagian tersembunyi seperti oli dan busi mudah ditemukan. Saat sebuah bagian terpilih, titiknya berubah oranye (warna brand) dan membesar, titik lain meredup.
 
 Bagian yang tersembunyi di dalam mesin (misal oli mesin, celah katup) diwakili oleh mesh penanda yang terlihat, contoh: tutup pengisian oli untuk `engine_oil`, tutup kepala silinder untuk `valve_clearance`.
 

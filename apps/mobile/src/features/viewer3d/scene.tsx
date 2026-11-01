@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { ControlsLike } from './types';
+import { BRAND } from '@/lib/theme';
 
 const SELECT_COLOR = '#2563eb';
-const HOTSPOT_SELECTED_COLOR = '#dc2626';
+const HOTSPOT_SELECTED_COLOR = BRAND.orangeStrong;
 
 /**
  * Finds the part code of a mesh by walking up to the nearest `part__*` node.
@@ -160,13 +161,13 @@ export function CameraRig({ focusView, defaultCamera }: { focusView: PartView | 
 export function Stage({ dark }: { dark: boolean }) {
   return (
     <>
-      <color attach="background" args={[dark ? '#0f172a' : '#e2e8f0']} />
-      <hemisphereLight args={['#ffffff', '#64748b', 2.0]} />
+      <color attach="background" args={[dark ? '#171717' : '#e5e5e5']} />
+      <hemisphereLight args={['#ffffff', '#737373', 2.0]} />
       <directionalLight position={[3, 5, 4]} intensity={2.4} />
       <directionalLight position={[-3, 2, -3]} intensity={0.8} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001, 0]}>
         <circleGeometry args={[1.5, 48]} />
-        <meshStandardMaterial color={dark ? '#1e293b' : '#cbd5e1'} />
+        <meshStandardMaterial color={dark ? '#262626' : '#d4d4d4'} />
       </mesh>
     </>
   );

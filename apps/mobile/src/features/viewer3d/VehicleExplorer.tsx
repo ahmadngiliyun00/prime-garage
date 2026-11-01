@@ -106,7 +106,7 @@ export function VehicleExplorer({ vehicle, components }: { vehicle: VehicleDto; 
 
   const viewer = viewerError ? (
     <View className="flex-1 items-center justify-center p-6">
-      <Ionicons name="cube-outline" size={36} color="#94a3b8" />
+      <Ionicons name="cube-outline" size={36} color="#a3a3a3" />
       <Body className="mt-2 text-center">Tampilan 3D tidak tersedia di perangkat ini.</Body>
       <Muted className="text-center">{viewerError}. Gunakan daftar bagian di bawah.</Muted>
     </View>
@@ -315,7 +315,7 @@ function PartPanel({
           <Muted>{part.summary}</Muted>
         </View>
         <Pressable accessibilityLabel="Tutup" onPress={onClose} hitSlop={8}>
-          <Ionicons name="close" size={22} color="#64748b" />
+          <Ionicons name="close" size={22} color="#737373" />
         </Pressable>
       </View>
 

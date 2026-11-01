@@ -42,6 +42,7 @@ Jika perubahan memang perlu: tulis usulan ADR baru di `docs/ARCHITECTURE.md` (st
 
 ## 4. Konvensi
 
+- **Warna**: brand mengikuti logo, yaitu oranye (utama), putih, dan hitam. Ambil dari `apps/mobile/src/lib/theme.ts` atau kelas Tailwind `brand-*`; `slate-*` dipetakan ke abu-abu netral. Merah hanya untuk aksi berbahaya (hapus) dan status Jatuh tempo.
 - **Bahasa UI**: Bahasa Indonesia (default). Siapkan struktur i18n agar bahasa Inggris bisa ditambah.
 - **Bahasa kode**: identifier, nama tabel, kolom, dan komentar kode dalam bahasa Inggris. Dokumen di `docs/` dalam Bahasa Indonesia.
 - **Penamaan**: tabel MySQL `snake_case` jamak (`service_records`); model Prisma `PascalCase` tunggal dengan `@@map`; komponen React `PascalCase`; file non-komponen `kebab-case`.

@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'my.id.ngiliyun.primegarage',
     versionCode: 1,
     adaptiveIcon: {
-      backgroundColor: '#0f172a',
+      backgroundColor: '#0a0a0a',
       foregroundImage: './assets/android-icon-foreground.png',
       monochromeImage: './assets/android-icon-monochrome.png',
     },
@@ -34,8 +34,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/favicon.png',
     name: 'PrimeGarage',
     shortName: 'PrimeGarage',
-    themeColor: '#dc2626',
-    backgroundColor: '#0f172a',
+    themeColor: '#ff7a00',
+    backgroundColor: '#0a0a0a',
   },
   plugins: [
     'expo-router',
@@ -45,13 +45,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-web-browser',
     [
       'expo-splash-screen',
-      { image: './assets/splash-icon.png', imageWidth: 180, resizeMode: 'contain', backgroundColor: '#0f172a' },
+      { image: './assets/splash-icon.png', imageWidth: 180, resizeMode: 'contain', backgroundColor: '#0a0a0a' },
     ],
     [
       'expo-notifications',
       {
         icon: './assets/notification-icon.png',
-        color: '#dc2626',
+        color: '#ff7a00',
         defaultChannel: 'reminders',
       },
     ],
