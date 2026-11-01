@@ -1,7 +1,22 @@
-import { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } from '@react-native-google-signin/google-signin';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui';
+import { TurboModuleRegistry } from 'react-native';
+import { Button, Muted } from '@/components/ui';
 import { GOOGLE_WEB_CLIENT_ID } from '@/lib/config';
+
+type GoogleSigninModule = typeof import('@react-native-google-signin/google-signin');
+
+/**
+ * The native module only exists in a development or production build. Expo Go does not ship it,
+ * and importing the package there throws at module load time and takes the whole login route down.
+ * So the package is required lazily, only after checking that the native side is registered.
+ */
+function loadGoogleSignin(): GoogleSigninModule | null {
+  if (TurboModuleRegistry.get('RNGoogleSignin') == null) return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- lazy load, see comment above
+  return require('@react-native-google-signin/google-signin') as GoogleSigninModule;
+}
+
+const google = loadGoogleSignin();
 
 /**
  * Android: native Google Sign-In. The ID token audience is the WEB client ID
@@ -12,10 +27,18 @@ export function GoogleSignInButton({ onIdToken, onError }: { onIdToken: (idToken
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (GOOGLE_WEB_CLIENT_ID) GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    if (google && GOOGLE_WEB_CLIENT_ID) google.GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
   }, []);
 
   if (!GOOGLE_WEB_CLIENT_ID) return null;
+  if (!google) {
+    return (
+      <Muted className="text-center">
+        Login Google tidak tersedia di Expo Go. Gunakan development build, atau login pengembang di bawah.
+      </Muted>
+    );
+  }
+  const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = google;
 
   const signIn = async () => {
     setBusy(true);
