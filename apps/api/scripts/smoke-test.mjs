@@ -60,8 +60,10 @@ const supra = models.find((m) => m.slug === 'honda-supra-x-125-fi');
 assert.ok(supra);
 const parts = (await call('GET', '/catalog/parts')).json;
 assert.ok(parts.length >= 18);
-const m3d = (await call('GET', '/catalog/models3d/underbone_v1')).json;
-assert.equal(m3d.partViews.length, parts.length);
+for (const key of ['underbone_v1', 'honda_supra_x_125_fi_v1']) {
+  const m3d = (await call('GET', `/catalog/models3d/${key}`)).json;
+  assert.equal(m3d.partViews.length, parts.length, key);
+}
 step('catalog');
 
 // Vehicle
@@ -76,7 +78,7 @@ const vehicle = (
   })
 ).json;
 assert.equal(vehicle.plateNumber, 'AB 1234 CD');
-assert.equal(vehicle.model3dKey, 'underbone_v1');
+assert.equal(vehicle.model3dKey, 'honda_supra_x_125_fi_v1');
 const rules = (await call('GET', `/vehicles/${vehicle.id}/rules`)).json;
 assert.equal(rules.length, 24);
 let components = (await call('GET', `/vehicles/${vehicle.id}/components`)).json;
