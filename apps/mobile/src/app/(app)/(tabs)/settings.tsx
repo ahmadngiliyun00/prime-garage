@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
@@ -75,7 +76,7 @@ export default function SettingsScreen() {
         </View>
       </Card>
 
-      <Body className="text-center text-xs text-slate-400">PrimeGarage v0.1.0</Body>
+      <Body className="text-center text-xs text-slate-400">PrimeGarage v{Constants.expoConfig?.version ?? '1.0.0'}</Body>
       {Platform.OS === 'web' ? (
         <Button title="Pasang di Mac (PWA)" variant="ghost" small icon="desktop-outline" onPress={() => notify('Pasang PrimeGarage', 'Safari: menu File, lalu Add to Dock. Chrome: ikon Install di bilah alamat.')} />
       ) : (

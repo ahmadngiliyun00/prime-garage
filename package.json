@@ -1,7 +1,7 @@
 {
   "name": "prime-garage",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "PrimeGarage: garasi digital untuk riwayat servis dan estimasi umur komponen kendaraan",
   "license": "MIT",
   "workspaces": [
