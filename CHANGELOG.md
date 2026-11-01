@@ -5,6 +5,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 ## [Unreleased]
 
 ### Diperbaiki
+- Viewer 3D tidak lagi crash di iOS dan Android (`process.emitWarning is not a function`): Metro sekarang memakai build ESM `three.module.js`, bukan shim `three.cjs`.
 - Aplikasi tidak lagi crash di Expo Go karena modul native Google Sign-In tidak tersedia; tombol Google diganti pesan dan login pengembang tetap bisa dipakai.
 
 ## [1.0.0] - 2026-11-01
