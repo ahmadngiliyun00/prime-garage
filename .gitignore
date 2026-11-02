@@ -8,3 +8,11 @@ coverage/
 .DS_Store
 storage/
 apps/api/src/generated/
+
+# aaPanel files in the site root
+/.user.ini
+/.htaccess
+/404.html
+# web build swap folders (scripts/deploy.sh)
+apps/mobile/dist-next/
+apps/mobile/dist-prev/

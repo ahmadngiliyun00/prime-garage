@@ -2,6 +2,8 @@
 
 Target produksi: **VPS Ubuntu 24.04 dengan aaPanel**, Nginx, MySQL 8, Node.js 22 LTS, npm 11, PM2. Android didistribusikan lewat Google Play (AAB dari EAS Build).
 
+Repo di-clone langsung ke folder site aaPanel: **`/www/wwwroot/primegarage.ngiliyun.my.id`** (disebut `APP` di bawah). Root Nginx **wajib** diarahkan ke `APP/apps/mobile/dist`, bukan ke `APP`, agar file seperti `apps/api/.env` tidak pernah terjangkau dari internet (bagian 5).
+
 | Komponen | Alamat |
 |---|---|
 | Web (SPA) | `https://primegarage.ngiliyun.my.id/` |
@@ -13,18 +15,32 @@ Target produksi: **VPS Ubuntu 24.04 dengan aaPanel**, Nginx, MySQL 8, Node.js 22
 ## 0. Persiapan sekali saja
 
 ### 0.1 Server
-Pastikan Node.js 22 dan PM2 tersedia, lalu pasang npm 11 (ADR-010):
+1. Pastikan Node.js 22 atau lebih baru tersedia (`node -v`). Di aaPanel bisa lewat App Store > Node.js version manager, lalu pastikan `node` ada di PATH terminal.
+2. Pasang npm 11 (ADR-010) dan PM2:
 
 ```bash
-npm install -g npm@11
+npm install -g npm@11 pm2
+```
+
+3. Buat site di aaPanel > Website > Add site: domain `primegarage.ngiliyun.my.id`, PHP **Static** (tanpa PHP), database tidak perlu dibuat dari sini. aaPanel membuat folder `/www/wwwroot/primegarage.ngiliyun.my.id`.
+4. Kosongkan folder site lalu clone repo ke sana. aaPanel menaruh `.user.ini` yang dikunci (`chattr +i`); file itu sudah diabaikan git, jadi biarkan saja. Jika folder masih berisi `index.html` atau `404.html` bawaan aaPanel, hapus dulu agar clone berhasil:
+
+```bash
+cd /www/wwwroot/primegarage.ngiliyun.my.id
 ```
 
 ```bash
-mkdir -p /www/prime-garage/storage
+rm -f index.html 404.html
 ```
 
 ```bash
-git clone https://github.com/ahmadngiliyun00/prime-garage.git /www/prime-garage/app
+git clone https://github.com/ahmadngiliyun00/prime-garage.git /tmp/prime-garage && cp -a /tmp/prime-garage/. /www/wwwroot/primegarage.ngiliyun.my.id/ && rm -rf /tmp/prime-garage
+```
+
+5. Folder unggahan (foto nota, foto kendaraan) ada di dalam repo, tapi di luar root web dan diabaikan git:
+
+```bash
+mkdir -p /www/wwwroot/primegarage.ngiliyun.my.id/storage
 ```
 
 ### 0.2 GitHub OAuth App (login GitHub)
@@ -61,7 +77,13 @@ git clone https://github.com/ahmadngiliyun00/prime-garage.git /www/prime-garage/
 ## 1. Variabel lingkungan
 
 ### 1.1 API (`apps/api/.env`, tidak di-commit)
-Salin dari `apps/api/.env.example`. Nilai penting:
+Salin dari `apps/api/.env.example`, lalu batasi aksesnya:
+
+```bash
+cd /www/wwwroot/primegarage.ngiliyun.my.id && cp apps/api/.env.example apps/api/.env && chmod 600 apps/api/.env
+```
+
+Nilai penting:
 
 | Variabel | Nilai produksi |
 |---|---|
@@ -77,7 +99,7 @@ Salin dari `apps/api/.env.example`. Nilai penting:
 | `APP_WEB_URL` | `https://primegarage.ngiliyun.my.id` |
 | `CORS_ORIGINS` | `https://primegarage.ngiliyun.my.id` |
 | `AUTH_DEV_LOGIN_ENABLED` | `false` (API menolak start jika `true` di production) |
-| `STORAGE_DIR` | `/www/prime-garage/storage` |
+| `STORAGE_DIR` | `/www/wwwroot/primegarage.ngiliyun.my.id/storage` |
 | `SMTP_*`, `MAIL_FROM` | lihat bagian 0.3 |
 | `INTERNAL_API_URL`, `INTERNAL_API_SECRET` | `http://127.0.0.1:3000`, acak minimal 16 karakter |
 | `REMINDER_CRON` | `0 7 * * *` (07.00, dibaca dalam `REMINDER_TZ`) |
@@ -90,6 +112,14 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
 ### 1.2 App (`apps/mobile/.env` untuk build web, atau EAS environment untuk Android)
+
+Buat `apps/mobile/.env` di server berisi dua baris berikut (nilai lain boleh kosong):
+
+```
+EXPO_PUBLIC_API_URL=https://primegarage.ngiliyun.my.id
+EXPO_PUBLIC_DEV_LOGIN=false
+```
+
 | Variabel | Nilai produksi |
 |---|---|
 | `EXPO_PUBLIC_API_URL` | `https://primegarage.ngiliyun.my.id` |
@@ -100,92 +130,70 @@ Variabel `EXPO_PUBLIC_*` tertanam di bundle saat build, jadi **jangan** isi raha
 
 ## 2. Database (MySQL)
 
-1. aaPanel > Databases > Add database: nama `prime_garage`, user `pg_user`, akses `127.0.0.1` saja, charset `utf8mb4`.
-2. Migrasi dan seed katalog dijalankan dari folder `/www/prime-garage/app/apps/api`:
+1. aaPanel > Databases > Add database: nama `prime_garage`, user `pg_user`, akses `127.0.0.1` saja, charset `utf8mb4`. Masukkan user dan password itu ke `DATABASE_URL` di `apps/api/.env`.
+2. Migrasi dan seed katalog dijalankan otomatis oleh `scripts/deploy.sh` (bagian 3).
+3. Backup: aaPanel > Cron > Backup database `prime_garage` setiap hari, simpan 14 hari. Backup juga folder `/www/wwwroot/primegarage.ngiliyun.my.id/storage` (aaPanel > Cron > Backup directory).
+
+## 3. Deploy dan update (satu perintah)
+
+`scripts/deploy.sh` menjalankan semua langkah berurutan dan berhenti dengan pesan jelas bila ada yang salah:
+
+1. Memeriksa Node.js 22+, npm 11+, PM2, dan `.env` (wajib `NODE_ENV=production`, dev login mati).
+2. `git pull` dari `main`.
+3. `npm ci`, build API (Prisma Client dan NestJS).
+4. Migrasi database dan seed katalog (seed aman diulang, tidak menyentuh data pengguna).
+5. Build web ke folder sementara lalu ditukar, sehingga Nginx tidak pernah menyajikan build setengah jadi.
+6. `pm2 startOrReload` untuk `prime-garage-api` dan `prime-garage-worker` (wajib 1 instance agar cron tidak ganda), `pm2 save`, lalu cek `/api/health`.
+
+Deploy pertama dan setiap update:
 
 ```bash
-npx prisma migrate deploy
+bash /www/wwwroot/primegarage.ngiliyun.my.id/scripts/deploy.sh
 ```
+
+Opsi: `--skip-web` (tidak membangun ulang web, misalnya bila RAM server kecil dan `dist` dibangun di komputer lain) dan `--no-pull` (memakai kode yang sudah ada).
+
+Setelah deploy pertama, buat akun login pemilik (tidak ada pendaftaran publik, ADR-011). Password diminta dua kali; perintah yang sama dipakai untuk reset password:
 
 ```bash
-npm run db:seed
+cd /www/wwwroot/primegarage.ngiliyun.my.id && npm run user:password -w @prime-garage/api -- --username ahmadngiliyun00 --email ahmad@ngiliyun.my.id --name "Ahmad Ngiliyun"
 ```
 
-Seed bersifat idempoten (aman dijalankan ulang saat katalog bertambah).
-
-3. Buat akun login pemilik (tidak ada pendaftaran publik, ADR-011). Password diminta dua kali lewat prompt tersembunyi; perintah yang sama dipakai untuk reset password:
-
-```bash
-npm run user:password -- --username ahmad --email ahmad@ngiliyun.my.id --name "Ahmad"
-```
-
-3. Backup: aaPanel > Cron > Backup database `prime_garage` setiap hari, simpan 14 hari. Backup juga folder `/www/prime-garage/storage`.
-
-## 3. Build dan jalankan API serta worker (PM2)
-
-Dari folder `/www/prime-garage/app`:
-
-```bash
-git pull origin main
-```
-
-```bash
-npm ci
-```
-
-```bash
-npm run build:api
-```
-
-Dari folder `/www/prime-garage/app/apps/api`:
-
-```bash
-npx prisma migrate deploy
-```
-
-```bash
-pm2 startOrReload ecosystem.config.cjs
-```
-
-```bash
-pm2 save
-```
-
-Sekali saja agar PM2 hidup setelah reboot:
+Sekali saja, agar PM2 hidup lagi setelah server reboot (jalankan perintah yang dicetaknya):
 
 ```bash
 pm2 startup
 ```
 
-`ecosystem.config.cjs` menjalankan dua proses: `prime-garage-api` (fork, 1 instance) dan `prime-garage-worker` (fork, **wajib 1 instance** agar cron tidak ganda). Cek kesehatan:
+Memantau:
 
 ```bash
-curl -s http://127.0.0.1:3000/api/health
+pm2 status
+```
+
+```bash
+pm2 logs prime-garage-api --lines 50
 ```
 
 ## 4. Build web (SPA)
 
-Dari folder `/www/prime-garage/app/apps/mobile` (pastikan `.env` berisi nilai bagian 1.2):
-
-```bash
-npx expo export -p web
-```
-
-Hasil di `apps/mobile/dist/`.
+Sudah termasuk di `scripts/deploy.sh`. Hasilnya di `/www/wwwroot/primegarage.ngiliyun.my.id/apps/mobile/dist`. Jika build web di server kehabisan memori, bangun di komputer development dengan `.env` production (bagian 1.2), lalu salin folder `apps/mobile/dist` ke server dan jalankan deploy dengan `--skip-web`.
 
 ## 5. Nginx (aaPanel)
 
-aaPanel > Website > Add site `primegarage.ngiliyun.my.id` > SSL (Let's Encrypt, Force HTTPS) > Config. Set root dan tambahkan blok berikut di dalam `server`:
+1. aaPanel > Website > `primegarage.ngiliyun.my.id` > SSL: pasang Let's Encrypt dan aktifkan Force HTTPS.
+2. aaPanel > Website > `primegarage.ngiliyun.my.id` > Config. Biarkan baris buatan aaPanel (listen, SSL, log, `include`), lalu:
+   - Ganti baris `root` menjadi `root /www/wwwroot/primegarage.ngiliyun.my.id/apps/mobile/dist;`
+   - Tambahkan blok di bawah ini di dalam `server`, sebelum blok `location` bawaan aaPanel.
+3. Simpan. aaPanel menguji konfigurasi sebelum menerapkannya.
 
 ```nginx
-root /www/prime-garage/app/apps/mobile/dist;
+root /www/wwwroot/primegarage.ngiliyun.my.id/apps/mobile/dist;
 index index.html;
 client_max_body_size 6m;
 
-types { model/gltf-binary glb; }
-
 # API dan Socket.IO (ADR-008)
-location /api/ {
+location ^~ /api/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
@@ -197,20 +205,54 @@ location /api/ {
     proxy_read_timeout 86400;
 }
 
-# SPA fallback
-location / {
-    try_files $uri $uri/ /index.html;
-}
-
+# Halaman utama SPA: selalu ambil versi terbaru
 location = /index.html {
     add_header Cache-Control "no-cache";
 }
 
-location /_expo/ {
+# Bundle JS dan CSS (nama berisi hash)
+location ^~ /_expo/ {
     expires 1y;
     add_header Cache-Control "public, immutable";
+    try_files $uri =404;
+}
+
+# Gambar, font, dan model 3D (nama berisi hash)
+location ^~ /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+    try_files $uri =404;
+    location ~* \.glb$ {
+        types { }
+        default_type model/gltf-binary;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+
+# SPA fallback
+location / {
+    try_files $uri $uri/ /index.html;
 }
 ```
+
+Jangan menaruh `types { ... }` langsung di dalam `server`: blok itu menggantikan seluruh daftar MIME Nginx, sehingga HTML dan JS terkirim sebagai `application/octet-stream`. Tipe `.glb` cukup diatur di dalam `location` seperti di atas.
+
+Cek dari server setelah Nginx dan deploy selesai:
+
+```bash
+curl -sI https://primegarage.ngiliyun.my.id/ | grep -i content-type
+```
+
+```bash
+curl -s https://primegarage.ngiliyun.my.id/api/health
+```
+
+```bash
+curl -s https://primegarage.ngiliyun.my.id/apps/api/.env | head -c 80
+```
+
+Hasil yang benar: `text/html`, `{"status":"ok","db":true,...}`, dan perintah ketiga menampilkan HTML halaman app (bukan isi `.env`).
 
 Pratinjau perilaku yang sama di lokal (statis, fallback SPA, proxy `/api` dan WebSocket):
 
@@ -255,10 +297,9 @@ npx eas-cli@latest submit -p android --profile production
 
 ## 7. Urutan deploy rilis
 1. Merge ke `main`, tag versi (`v0.x.y`).
-2. Deploy API dan worker (bagian 3), pastikan migrasi sukses dan `pm2 logs` bersih.
-3. Build web (bagian 4); Nginx langsung melayani `dist/` yang baru.
-4. Build AAB dan unggah ke track internal/closed testing (bagian 6), lalu promosikan ke produksi.
-5. Uji cepat: login, tambah kendaraan, buka 3D, catat servis, cek realtime di dua perangkat.
+2. Di server jalankan `bash /www/wwwroot/primegarage.ngiliyun.my.id/scripts/deploy.sh` (bagian 3): API, worker, migrasi, katalog, dan web sekaligus. Pastikan `pm2 logs` bersih.
+3. Build AAB dan unggah ke track internal/closed testing (bagian 6), lalu promosikan ke produksi.
+4. Uji cepat: login, tambah kendaraan, buka 3D, catat servis, cek realtime di dua perangkat.
 
 ## 8. Development lokal
 

@@ -5,6 +5,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 ## [Unreleased]
 
 ### Ditambahkan
+- `scripts/deploy.sh`: deploy dan update production dengan satu perintah (cek prasyarat dan `.env`, pull, install, build API, migrasi, seed katalog, build web tanpa downtime, reload PM2, cek kesehatan).
 - `GET /api` menjawab nama dan status API (sebelumnya 404) beserta alamat pemeriksaan `/api/health`.
 - Logo dan emblem PrimeGarage: ikon aplikasi Android dan iOS, ikon adaptif dan ikon tema Android, ikon notifikasi, splash, favicon, ikon PWA, logo di halaman login, dan banner README. Sumber di `docs/brand`, dibangun ulang dengan `npm run generate:brand -w @prime-garage/mobile`.
 - Perintah `npm run dev:web` untuk menjalankan versi web saja saat development.
@@ -12,6 +13,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 - Login dengan username (atau email) dan password. Akun dibuat dan password direset lewat `npm run user:password -w @prime-garage/api` (FR-AUTH-01, ADR-011).
 
 ### Diperbaiki
+- Konfigurasi Nginx di panduan deploy: blok `types` di level `server` membuat HTML dan JS terkirim sebagai `application/octet-stream`; tipe `.glb` kini diatur di dalam `location /assets/`. Panduan disesuaikan dengan folder site aaPanel `/www/wwwroot/primegarage.ngiliyun.my.id`, root Nginx ke `apps/mobile/dist`.
 - Build web production yang tidak sengaja memakai `EXPO_PUBLIC_API_URL=http://localhost:3000` tetap menghubungi API di domainnya sendiri, bukan `localhost` milik pengunjung.
 - Login GitHub di development memakai callback sesuai alamat yang dipakai untuk membuka API (localhost atau IP LAN), sehingga web di komputer dan app di HP bisa memakai OAuth App yang sama. Sebelumnya hanya satu `API_PUBLIC_URL` yang berlaku.
 - Web development tidak lagi diblokir CORS saat `CORS_ORIGINS` masih berisi alamat production: di luar production, API juga mengizinkan origin localhost dan jaringan lokal. Production tetap hanya `CORS_ORIGINS`.

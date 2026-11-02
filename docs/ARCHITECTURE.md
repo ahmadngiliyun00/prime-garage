@@ -16,7 +16,7 @@ Dokumen ini **mengunci** tech stack. Perubahan hanya lewat ADR baru (lihat bagia
 │  socket.io-client          │        │   ├─ prime-garage-api     (NestJS, REST + WS)        │
 └───────────────────────────┘        │   └─ prime-garage-worker  (cron pengingat 07.00 WIB) │
              ▲                        │  MySQL 8  (database: prime_garage)                   │
-             │ Push (Expo Push/FCM)   │  Disk: /www/prime-garage/storage (unggahan)          │
+             │ Push (Expo Push/FCM)   │  Disk: <folder site>/storage (unggahan)              │
              └────────────────────────│                                                      │
                                       └────────────────────────────────────────────────────┘
                                           │ SMTP Google Workspace (smtp.gmail.com:465) → email pengingat
