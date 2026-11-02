@@ -11,6 +11,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 - Login dengan username (atau email) dan password. Akun dibuat dan password direset lewat `npm run user:password -w @prime-garage/api` (FR-AUTH-01, ADR-011).
 
 ### Diperbaiki
+- Prisma Client dibuat ulang otomatis oleh `db:migrate`, `db:deploy`, `dev:api`, `dev:worker`, dan `user:password`. Sebelumnya, setelah `git pull`, API gagal di-compile dan `user:password` gagal dengan "Unknown argument `username`" karena Prisma 7 tidak lagi menjalankan `generate` setelah migrasi.
 - `user:password` dan perintah `dev:*` membangun ulang `packages/shared` lebih dulu, sehingga tidak lagi gagal dengan "does not provide an export named" setelah `git pull`. Skrip juga memberi pesan jelas bila database mati atau migrasi belum dijalankan.
 - Web tidak lagi menampilkan error "Cannot manually set color scheme" saat dibuka: NativeWind memakai `darkMode: class` dan class `dark` disinkronkan dengan tema sistem. Ikon tombol sekunder terbaca di tema gelap.
 - Viewer 3D tidak lagi crash di iOS dan Android (`process.emitWarning is not a function`): Metro sekarang memakai build ESM `three.module.js`, bukan shim `three.cjs`.
