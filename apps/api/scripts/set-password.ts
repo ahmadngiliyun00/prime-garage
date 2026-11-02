@@ -9,29 +9,53 @@
  * username and password are added to that account.
  */
 import { parseArgs } from 'node:util';
-import { createInterface } from 'node:readline';
 import { usernameSchema } from '@prime-garage/shared';
 import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { ensurePersonalGarage } from '../src/modules/auth/accounts.js';
 import { hashPassword, PASSWORD_MIN_LENGTH } from '../src/modules/auth/password.js';
 
+/**
+ * Reads a line without echoing it: each typed character shows as `*`. Uses raw mode directly
+ * (no readline output patching), handles backspace, Ctrl+C, and pasted text.
+ */
 function askHidden(question: string): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    const out = rl as unknown as { _writeToOutput: (s: string) => void; output: NodeJS.WriteStream };
-    let prompted = false;
-    out._writeToOutput = (s: string) => {
-      if (!prompted) {
-        out.output.write(s);
-        prompted = true;
+  return new Promise((resolve, reject) => {
+    const { stdin, stdout } = process;
+    let value = '';
+    stdout.write(question);
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+
+    const finish = (err?: Error) => {
+      stdin.off('data', onData);
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdout.write('\n');
+      if (err) reject(err);
+      else resolve(value);
+    };
+
+    const onData = (chunk: string) => {
+      // Bracketed paste markers some terminals wrap pasted text in.
+      const text = chunk.replace(/\x1b\[20[01]~/g, '');
+      for (const ch of text) {
+        if (ch === '\r' || ch === '\n') return finish();
+        if (ch === '\u0003') return finish(new Error('Dibatalkan'));
+        if (ch === '\u007f' || ch === '\b') {
+          if (value.length > 0) {
+            value = [...value].slice(0, -1).join('');
+            stdout.write('\b \b');
+          }
+          continue;
+        }
+        if (ch < ' ') continue; // other control keys
+        value += ch;
+        stdout.write('*');
       }
     };
-    rl.question(question, (answer) => {
-      rl.close();
-      process.stdout.write('\n');
-      resolve(answer);
-    });
+    stdin.on('data', onData);
   });
 }
 

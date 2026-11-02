@@ -11,6 +11,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 - Login dengan username (atau email) dan password. Akun dibuat dan password direset lewat `npm run user:password -w @prime-garage/api` (FR-AUTH-01, ADR-011).
 
 ### Diperbaiki
+- Prompt password `user:password` selalu menampilkan labelnya dan menampilkan `*` untuk setiap karakter; backspace, paste, dan Ctrl+C ditangani dengan benar.
 - Pesan "Tidak dapat terhubung ke server" kini menyebut alamat API yang dihubungi, dan saat development mengingatkan untuk menjalankan `npm run dev:api`.
 - Prisma Client dibuat ulang otomatis oleh `db:migrate`, `db:deploy`, `dev:api`, `dev:worker`, dan `user:password`. Sebelumnya, setelah `git pull`, API gagal di-compile dan `user:password` gagal dengan "Unknown argument `username`" karena Prisma 7 tidak lagi menjalankan `generate` setelah migrasi.
 - `user:password` dan perintah `dev:*` membangun ulang `packages/shared` lebih dulu, sehingga tidak lagi gagal dengan "does not provide an export named" setelah `git pull`. Skrip juga memberi pesan jelas bila database mati atau migrasi belum dijalankan.
