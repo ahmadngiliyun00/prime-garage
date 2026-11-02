@@ -93,10 +93,10 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 | Variabel | Nilai produksi |
 |---|---|
 | `EXPO_PUBLIC_API_URL` | `https://primegarage.ngiliyun.my.id` |
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | client ID web |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | kosongkan (login Google ditunda, FR-AUTH-09) |
 | `EXPO_PUBLIC_DEV_LOGIN` | `false` |
 
-Variabel `EXPO_PUBLIC_*` tertanam di bundle saat build, jadi **jangan** isi rahasia di sana.
+Variabel `EXPO_PUBLIC_*` tertanam di bundle saat build, jadi **jangan** isi rahasia di sana. Build Android lewat EAS mengambil `EXPO_PUBLIC_API_URL` dari `eas.json` (semua profil sudah `https://primegarage.ngiliyun.my.id`). Untuk web, jika `.env` masih `http://localhost:3000`, app di domain production otomatis memakai domainnya sendiri, tapi tetap sebaiknya diisi alamat production. Pastikan `EXPO_PUBLIC_DEV_LOGIN=false` saat build production.
 
 ## 2. Database (MySQL)
 

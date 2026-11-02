@@ -33,6 +33,11 @@ function defaultApiUrl(): string {
  */
 function resolveApiUrl(): string {
   const url = new URL(process.env.EXPO_PUBLIC_API_URL || defaultApiUrl());
+  // Web served from the real domain with a loopback API URL baked in (a dev .env used for the
+  // production build): the API lives on the same origin (ADR-008), never on the visitor's machine.
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && LOOPBACK.includes(url.hostname) && !LOOPBACK.includes(window.location.hostname)) {
+    return window.location.origin;
+  }
   const devHost = devMachineHost();
   if (Platform.OS !== 'web' && devHost && (LOOPBACK.includes(url.hostname) || url.hostname === '10.0.2.2')) {
     url.hostname = devHost;

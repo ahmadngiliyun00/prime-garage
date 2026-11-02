@@ -12,6 +12,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 - Login dengan username (atau email) dan password. Akun dibuat dan password direset lewat `npm run user:password -w @prime-garage/api` (FR-AUTH-01, ADR-011).
 
 ### Diperbaiki
+- Build web production yang tidak sengaja memakai `EXPO_PUBLIC_API_URL=http://localhost:3000` tetap menghubungi API di domainnya sendiri, bukan `localhost` milik pengunjung.
 - Login GitHub di development memakai callback sesuai alamat yang dipakai untuk membuka API (localhost atau IP LAN), sehingga web di komputer dan app di HP bisa memakai OAuth App yang sama. Sebelumnya hanya satu `API_PUBLIC_URL` yang berlaku.
 - Web development tidak lagi diblokir CORS saat `CORS_ORIGINS` masih berisi alamat production: di luar production, API juga mengizinkan origin localhost dan jaringan lokal. Production tetap hanya `CORS_ORIGINS`.
 - App di HP saat development tidak lagi gagal terhubung ke `http://localhost:3000`: alamat loopback otomatis diganti dengan IP komputer yang menjalankan Metro. API mencetak petunjuk `HOST=0.0.0.0` dan alamat yang bisa dibuka dari HP.
