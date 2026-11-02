@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, Unauthoriz
 import { randomBytes } from 'node:crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import { env, isProduction } from '../../config/env.js';
+import { isDevOrigin } from '../../config/cors.js';
 import { GITHUB_STATE_TTL_SECONDS, isAllowedReturnTo, LoginCodeStore, pickVerifiedEmail, type GithubEmail } from './github-oauth.js';
 
 const AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
@@ -26,8 +27,15 @@ export class GithubService {
     return Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
   }
 
-  get callbackUrl(): string {
-    return `${env.API_PUBLIC_URL.replace(/\/$/, '')}/api/auth/github/callback`;
+  /**
+   * GitHub redirect URI. Production: always API_PUBLIC_URL. Development: the origin the browser
+   * used to reach the API when that is a local or private network address, so the same OAuth App
+   * (with several redirect URIs registered) works from http://localhost:3000 on the computer and
+   * from http://<lan-ip>:3000 on a phone; the nonce cookie is then sent back to the same host.
+   */
+  callbackUrl(requestOrigin?: string): string {
+    const base = !isProduction && requestOrigin && isDevOrigin(requestOrigin) ? requestOrigin : env.API_PUBLIC_URL;
+    return `${base.replace(/\/$/, '')}/api/auth/github/callback`;
   }
 
   isAllowedReturnTo(returnTo: string): boolean {
@@ -39,11 +47,12 @@ export class GithubService {
   }
 
   /** Builds the GitHub authorize URL. `nonce` is also set as a cookie to bind the flow to this browser. */
-  async start(returnTo: string): Promise<{ url: string; nonce: string }> {
+  async start(returnTo: string, requestOrigin?: string): Promise<{ url: string; nonce: string }> {
     if (!this.enabled) throw new BadRequestException('Login GitHub belum dikonfigurasi di server');
     if (!this.isAllowedReturnTo(returnTo)) throw new BadRequestException('Alamat kembali tidak diizinkan');
     const nonce = randomBytes(16).toString('base64url');
-    const state = await new SignJWT({ returnTo, nonce })
+    const callbackUrl = this.callbackUrl(requestOrigin);
+    const state = await new SignJWT({ returnTo, nonce, callbackUrl })
       .setProtectedHeader({ alg: 'HS256' })
       .setAudience(STATE_AUDIENCE)
       .setIssuedAt()
@@ -51,7 +60,7 @@ export class GithubService {
       .sign(stateSecret);
     const url = new URL(AUTHORIZE_URL);
     url.searchParams.set('client_id', env.GITHUB_CLIENT_ID!);
-    url.searchParams.set('redirect_uri', this.callbackUrl);
+    url.searchParams.set('redirect_uri', callbackUrl);
     url.searchParams.set('scope', 'read:user user:email');
     url.searchParams.set('state', state);
     url.searchParams.set('allow_signup', 'false');
@@ -59,20 +68,26 @@ export class GithubService {
   }
 
   /** Verifies the signed state. Returns the return URL, or null when the state is unusable. */
-  async readState(state: string | undefined, cookieNonce: string | undefined): Promise<{ returnTo: string | null; valid: boolean }> {
-    if (!state) return { returnTo: null, valid: false };
+  async readState(
+    state: string | undefined,
+    cookieNonce: string | undefined,
+  ): Promise<{ returnTo: string | null; valid: boolean; callbackUrl: string }> {
+    const fallback = this.callbackUrl();
+    if (!state) return { returnTo: null, valid: false, callbackUrl: fallback };
     try {
       const { payload } = await jwtVerify(state, stateSecret, { audience: STATE_AUDIENCE, algorithms: ['HS256'] });
       const returnTo = typeof payload['returnTo'] === 'string' && this.isAllowedReturnTo(payload['returnTo']) ? payload['returnTo'] : null;
       const valid = returnTo !== null && typeof payload['nonce'] === 'string' && payload['nonce'] === cookieNonce;
-      return { returnTo, valid };
+      const callbackUrl = typeof payload['callbackUrl'] === 'string' ? payload['callbackUrl'] : fallback;
+      return { returnTo, valid, callbackUrl };
     } catch {
-      return { returnTo: null, valid: false };
+      return { returnTo: null, valid: false, callbackUrl: fallback };
     }
   }
 
   /** Exchanges the OAuth code and loads the GitHub profile. Throws with an Indonesian message. */
-  async profileFromCode(code: string): Promise<GithubProfile> {
+  /** `callbackUrl` must be the redirect_uri sent to GitHub in `start` (GitHub checks they match). */
+  async profileFromCode(code: string, callbackUrl: string = this.callbackUrl()): Promise<GithubProfile> {
     const tokenRes = await this.fetchImpl(TOKEN_URL, {
       method: 'POST',
       headers: { accept: 'application/json', 'content-type': 'application/json' },
@@ -80,7 +95,7 @@ export class GithubService {
         client_id: env.GITHUB_CLIENT_ID,
         client_secret: env.GITHUB_CLIENT_SECRET,
         code,
-        redirect_uri: this.callbackUrl,
+        redirect_uri: callbackUrl,
       }),
     });
     const token = (await tokenRes.json().catch(() => ({}))) as { access_token?: string; error?: string; error_description?: string };

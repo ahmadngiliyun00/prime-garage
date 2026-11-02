@@ -35,10 +35,40 @@ describe('GithubService', () => {
     expect(authorize.searchParams.get('redirect_uri')).toBe('http://localhost:3000/api/auth/github/callback');
     const state = authorize.searchParams.get('state') ?? undefined;
 
-    expect(await svc.readState(state, nonce)).toEqual({ returnTo: 'http://localhost:8081/auth/github', valid: true });
+    expect(await svc.readState(state, nonce)).toMatchObject({ returnTo: 'http://localhost:8081/auth/github', valid: true });
     // Same state from another browser (no or different nonce cookie) is not valid.
     expect((await svc.readState(state, 'other')).valid).toBe(false);
     expect((await svc.readState('tampered.jwt.value', nonce)).returnTo).toBeNull();
+  });
+
+  it('uses the host the API was reached on for the callback in development', async () => {
+    const svc = new GithubService();
+    const cases: [string | undefined, string][] = [
+      ['http://localhost:3000', 'http://localhost:3000/api/auth/github/callback'],
+      ['http://192.168.1.27:3000', 'http://192.168.1.27:3000/api/auth/github/callback'],
+      // A public or spoofed Host header never becomes the redirect URI.
+      ['http://evil.example', 'http://localhost:3000/api/auth/github/callback'],
+      [undefined, 'http://localhost:3000/api/auth/github/callback'],
+    ];
+    for (const [origin, expected] of cases) {
+      const { url, nonce } = await svc.start('http://localhost:8081/auth/github', origin);
+      const authorize = new URL(url);
+      expect(authorize.searchParams.get('redirect_uri')).toBe(expected);
+      const read = await svc.readState(authorize.searchParams.get('state') ?? undefined, nonce);
+      expect(read.callbackUrl).toBe(expected);
+    }
+  });
+
+  it('sends the same redirect_uri when exchanging the code', async () => {
+    const svc = new GithubService();
+    const bodies: string[] = [];
+    const inner = fakeGithub('ahmadngiliyun00', [{ email: 'a@example.com', primary: true, verified: true }]);
+    svc.fetchImpl = async (input, init) => {
+      if (typeof init?.body === 'string') bodies.push(init.body);
+      return inner(input, init);
+    };
+    await svc.profileFromCode('code', 'http://192.168.1.27:3000/api/auth/github/callback');
+    expect(JSON.parse(bodies[0] ?? '{}')).toMatchObject({ redirect_uri: 'http://192.168.1.27:3000/api/auth/github/callback' });
   });
 
   it('refuses return URLs outside our origins', async () => {

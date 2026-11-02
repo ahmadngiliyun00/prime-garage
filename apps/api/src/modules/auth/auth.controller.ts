@@ -88,9 +88,9 @@ export class AuthController {
   /** Step 1: browser (web page or in-app auth session) is sent here, then on to GitHub. */
   @Public()
   @Get('github/start')
-  async githubStart(@Query('returnTo') returnTo: string | undefined, @Res() res: Response): Promise<void> {
+  async githubStart(@Query('returnTo') returnTo: string | undefined, @Req() req: Request, @Res() res: Response): Promise<void> {
     if (!returnTo) throw new BadRequestException('returnTo wajib diisi');
-    const { url, nonce } = await this.github.start(returnTo);
+    const { url, nonce } = await this.github.start(returnTo, `${req.protocol}://${req.get('host') ?? ''}`);
     res.cookie(GITHUB_NONCE_COOKIE, nonce, {
       httpOnly: true,
       secure: isProduction,
@@ -114,13 +114,13 @@ export class AuthController {
   ): Promise<void> {
     const nonce = (req.cookies as Record<string, string> | undefined)?.[GITHUB_NONCE_COOKIE];
     res.clearCookie(GITHUB_NONCE_COOKIE, { path: GITHUB_COOKIE_PATH });
-    const { returnTo, valid } = await this.github.readState(state, nonce);
+    const { returnTo, valid, callbackUrl } = await this.github.readState(state, nonce);
     if (!returnTo) throw new BadRequestException('Sesi login GitHub tidak valid, silakan ulangi dari aplikasi');
     const fail = (message: string) => res.redirect(302, withParams(returnTo, { error: message }));
     if (error) return fail(error === 'access_denied' ? 'Login GitHub dibatalkan' : 'Login GitHub gagal');
     if (!valid || !code) return fail('Sesi login GitHub tidak valid atau kedaluwarsa, silakan ulangi');
     try {
-      const loginCode = await this.auth.githubCallback(code);
+      const loginCode = await this.auth.githubCallback(code, callbackUrl);
       res.redirect(302, withParams(returnTo, { code: loginCode }));
     } catch (e) {
       if (!(e instanceof HttpException)) this.logger.error(`GitHub callback failed: ${(e as Error).message}`);

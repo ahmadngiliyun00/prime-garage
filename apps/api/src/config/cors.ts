@@ -7,6 +7,11 @@
 const DEV_ORIGIN =
   /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d{1,5})?$/;
 
+/** True for http(s) origins on localhost or a private network address (development machines). */
+export function isDevOrigin(origin: string): boolean {
+  return DEV_ORIGIN.test(origin);
+}
+
 export function isAllowedOrigin(origin: string, opts: { allowed: string[]; production: boolean }): boolean {
   if (opts.allowed.includes(origin)) return true;
   return !opts.production && DEV_ORIGIN.test(origin);

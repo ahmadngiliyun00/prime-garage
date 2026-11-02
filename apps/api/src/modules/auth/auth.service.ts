@@ -66,8 +66,8 @@ export class AuthService {
   }
 
   /** GitHub callback: loads the profile, signs the user in and returns a one-time code for the client. */
-  async githubCallback(code: string): Promise<string> {
-    const profile = await this.github.profileFromCode(code);
+  async githubCallback(code: string, callbackUrl: string): Promise<string> {
+    const profile = await this.github.profileFromCode(code, callbackUrl);
     const user = await this.upsertUser({
       provider: 'github',
       providerUserId: profile.id,

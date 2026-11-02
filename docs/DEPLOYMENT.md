@@ -28,11 +28,19 @@ git clone https://github.com/ahmadngiliyun00/prime-garage.git /www/prime-garage/
 ```
 
 ### 0.2 GitHub OAuth App (login GitHub)
-1. Buka https://github.com/settings/developers > **OAuth Apps** > **New OAuth App**.
-2. Homepage URL: `https://primegarage.ngiliyun.my.id`. Authorization callback URL: `https://primegarage.ngiliyun.my.id/api/auth/github/callback`.
-3. Salin **Client ID**, buat **Client secret**, lalu isi di `apps/api/.env`: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_ALLOWED_LOGINS=ahmadngiliyun00`, `API_PUBLIC_URL=https://primegarage.ngiliyun.my.id`.
-4. Untuk development buat OAuth App kedua (satu OAuth App hanya punya satu callback URL), misalnya callback `http://localhost:3000/api/auth/github/callback`. Untuk mencoba dari HP, pakai IP LAN komputer: callback `http://<ip-lan>:3000/api/auth/github/callback`, lalu set `API_PUBLIC_URL=http://<ip-lan>:3000` dan `HOST=0.0.0.0` di API, serta `EXPO_PUBLIC_API_URL=http://<ip-lan>:3000` di app.
-5. Tombol "Masuk dengan GitHub" muncul otomatis setelah `GITHUB_CLIENT_ID` dan `GITHUB_CLIENT_SECRET` terisi.
+1. Buka https://github.com/settings/developers, pilih **OAuth Apps**, lalu **New OAuth App**.
+2. Isi:
+   - **Application name**: `PrimeGarage`
+   - **Homepage URL**: `https://primegarage.ngiliyun.my.id`
+   - **Redirect URIs** (klik **Add redirect URI** untuk menambah baris, tanpa wildcard): satu baris per alamat API yang dipakai.
+     - `https://primegarage.ngiliyun.my.id/api/auth/github/callback` (production)
+     - `http://localhost:3000/api/auth/github/callback` (web di komputer development)
+     - `http://<ip-lan-komputer>:3000/api/auth/github/callback` (HP di Wi-Fi yang sama, misalnya `http://192.168.1.27:3000/api/auth/github/callback`)
+   - **Enable Device Flow**: tidak dicentang. **Expire user access tokens**: boleh dicentang (token GitHub hanya dipakai sekali saat login).
+3. Klik **Register application**, salin **Client ID**, lalu **Generate a new client secret** dan salin secret-nya (hanya tampil sekali).
+4. Isi di `apps/api/.env`: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_ALLOWED_LOGINS=ahmadngiliyun00`, dan `API_PUBLIC_URL` (production: `https://primegarage.ngiliyun.my.id`; development: `http://localhost:3000`).
+5. Di development, API memakai alamat yang dipakai untuk membukanya sebagai callback (localhost dari komputer, IP LAN dari HP), selama alamat itu terdaftar di Redirect URIs. Di production selalu `API_PUBLIC_URL`. Jika IP LAN komputer berubah, tambahkan Redirect URI baru.
+6. Tombol "Masuk dengan GitHub" muncul otomatis setelah `GITHUB_CLIENT_ID` dan `GITHUB_CLIENT_SECRET` terisi dan API di-restart.
 
 ### 0.2b Google OAuth (Google Cloud Console, ditunda, FR-AUTH-09)
 1. Buat project, lalu **OAuth consent screen** (External, nama aplikasi PrimeGarage, domain `ngiliyun.my.id`, tautan kebijakan privasi `https://primegarage.ngiliyun.my.id/privacy`).
