@@ -290,6 +290,11 @@ Di terminal lain:
 npm run dev:mobile
 ```
 
+Mencoba dari HP (Expo Go atau development build) di Wi-Fi yang sama:
+- Set `HOST=0.0.0.0` di `apps/api/.env` agar API bisa dijangkau dari HP. Saat start, API mencetak alamat yang bisa dibuka dari HP, misalnya `http://192.168.1.10:3000/api/health`.
+- `EXPO_PUBLIC_API_URL=http://localhost:3000` boleh tetap begitu: saat development, app di HP otomatis mengganti `localhost` dengan IP komputer yang menjalankan Metro.
+- Untuk mengecek API dari browser, buka `/api/health`. Alamat `/api` sendiri memang menjawab 404.
+
 Atau versi web saja, lalu buka `http://localhost:8081`:
 
 ```bash

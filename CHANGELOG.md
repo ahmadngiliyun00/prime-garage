@@ -11,6 +11,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 - Login dengan username (atau email) dan password. Akun dibuat dan password direset lewat `npm run user:password -w @prime-garage/api` (FR-AUTH-01, ADR-011).
 
 ### Diperbaiki
+- App di HP saat development tidak lagi gagal terhubung ke `http://localhost:3000`: alamat loopback otomatis diganti dengan IP komputer yang menjalankan Metro. API mencetak petunjuk `HOST=0.0.0.0` dan alamat yang bisa dibuka dari HP.
 - Prompt password `user:password` selalu menampilkan labelnya dan menampilkan `*` untuk setiap karakter; backspace, paste, dan Ctrl+C ditangani dengan benar.
 - Pesan "Tidak dapat terhubung ke server" kini menyebut alamat API yang dihubungi, dan saat development mengingatkan untuk menjalankan `npm run dev:api`.
 - Prisma Client dibuat ulang otomatis oleh `db:migrate`, `db:deploy`, `dev:api`, `dev:worker`, dan `user:password`. Sebelumnya, setelah `git pull`, API gagal di-compile dan `user:password` gagal dengan "Unknown argument `username`" karena Prisma 7 tidak lagi menjalankan `generate` setelah migrasi.
