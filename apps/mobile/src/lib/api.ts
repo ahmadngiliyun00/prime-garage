@@ -118,6 +118,16 @@ export function absoluteUrl(path: string | null | undefined): string | null {
 
 export function errorMessage(e: unknown): string {
   if (e instanceof ApiError) return e.message;
-  if (e instanceof Error) return e.message.includes('fetch') ? 'Tidak dapat terhubung ke server' : e.message;
+  if (e instanceof Error) return isNetworkError(e) ? connectionErrorMessage() : e.message;
   return 'Terjadi kesalahan';
+}
+
+/** fetch() rejects with a TypeError ("Failed to fetch" on web, "Network request failed" on native). */
+function isNetworkError(e: Error): boolean {
+  return e instanceof TypeError || /fetch|network request failed/i.test(e.message);
+}
+
+function connectionErrorMessage(): string {
+  const base = `Tidak dapat terhubung ke server (${API_URL}).`;
+  return __DEV__ ? `${base} Pastikan API berjalan: npm run dev:api` : `${base} Periksa koneksi internet lalu coba lagi.`;
 }
