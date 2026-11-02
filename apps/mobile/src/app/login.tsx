@@ -1,14 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Link, Redirect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { passwordLoginSchema } from '@prime-garage/shared';
-import { Body, Button, Card, Field, Muted, Screen, Title } from '@/components/ui';
+import { Body, Button, Card, Field, Muted, Screen } from '@/components/ui';
 import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton';
 import { startGithubLogin } from '@/features/auth/github';
 import { errorMessage, http } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { BRAND_LOGO_ASPECT, brandLogo } from '@/lib/theme';
 import { GOOGLE_WEB_CLIENT_ID, SHOW_DEV_LOGIN } from '@/lib/config';
 
 export default function LoginScreen() {
@@ -85,11 +85,14 @@ export default function LoginScreen() {
   return (
     <Screen>
       <View className="mt-10 items-center">
-        <View className="h-20 w-20 items-center justify-center rounded-3xl bg-brand-600">
-          <Ionicons name="speedometer-outline" size={44} color="#fff" />
-        </View>
-        <Title className="mt-4">PrimeGarage</Title>
-        <Muted className="mt-1 text-center">Pantau kondisi kendaraanmu, servis tepat waktu.</Muted>
+        <Image
+          source={brandLogo}
+          accessibilityRole="image"
+          accessibilityLabel="PrimeGarage: Ride, Drive, Maintenance"
+          resizeMode="contain"
+          style={{ width: 280, height: Math.round(280 / BRAND_LOGO_ASPECT) }}
+        />
+        <Muted className="mt-3 text-center">Pantau kondisi kendaraanmu, servis tepat waktu.</Muted>
       </View>
 
       <Card className="mt-8">

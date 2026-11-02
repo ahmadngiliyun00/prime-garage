@@ -62,7 +62,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "generate:model": "node scripts/generate-underbone-model.mjs",
-    "prepare:supra-model": "node scripts/prepare-supra-model.mjs"
+    "prepare:supra-model": "node scripts/prepare-supra-model.mjs",
+    "generate:brand": "node scripts/generate-brand-assets.mjs"
   },
   "private": true
 }

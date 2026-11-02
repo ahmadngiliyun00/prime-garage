@@ -60,6 +60,7 @@ Jika perubahan memang perlu: tulis usulan ADR baru di `docs/ARCHITECTURE.md` (st
 | `npm run user:password -w @prime-garage/api -- --username <u> --email <e>` | Buat akun atau reset password |
 | `node apps/api/scripts/smoke-test.mjs` | Tes end-to-end API (API berjalan, dev login aktif) |
 | `npm run generate:model` | Bangun ulang `underbone_v1.glb` |
+| `npm run generate:brand -w @prime-garage/mobile` | Bangun ulang semua ikon, splash, dan ikon web dari `docs/brand/logo-transparent.webp` |
 
 ## 6. Definisi selesai (Definition of Done)
 

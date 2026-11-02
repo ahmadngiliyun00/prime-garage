@@ -45,7 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-web-browser',
     [
       'expo-splash-screen',
-      { image: './assets/splash-icon.png', imageWidth: 180, resizeMode: 'contain', backgroundColor: '#0a0a0a' },
+      { image: './assets/splash-icon.png', imageWidth: 260, resizeMode: 'contain', backgroundColor: '#0a0a0a' },
     ],
     [
       'expo-notifications',

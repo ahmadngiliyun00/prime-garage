@@ -1,3 +1,5 @@
+![PrimeGarage: Ride, Drive, Maintain](docs/brand/banner.webp)
+
 # PrimeGarage
 
 > Pantau kondisi kendaraanmu, servis tepat waktu.
@@ -82,6 +84,14 @@ npm run user:password -w @prime-garage/api -- --username ahmad --email ahmad@exa
 ## Status
 
 MVP selesai dibangun dan teruji lokal (unit test, smoke test API, tes end-to-end web dengan Playwright). Langkah yang butuh akun dan kredensial pemilik (Google OAuth, EAS, FCM, SMTP, deploy VPS, Play Console) tercatat di [`docs/ROADMAP.md`](docs/ROADMAP.md) dengan tanda 🔑.
+
+## Brand
+
+Logo, emblem, dan banner asli ada di [`docs/brand`](docs/brand). Warna brand: oranye (utama), putih, dan hitam. Ikon aplikasi, ikon adaptif Android, splash, favicon, dan ikon PWA dibangun dari `docs/brand/logo-transparent.webp`:
+
+```bash
+npm run generate:brand -w @prime-garage/mobile
+```
 
 ## Kredit
 
