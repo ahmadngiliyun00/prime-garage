@@ -5,6 +5,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [S
 ## [Unreleased]
 
 ### Ditambahkan
+- `GET /api` menjawab nama dan status API (sebelumnya 404) beserta alamat pemeriksaan `/api/health`.
 - Logo dan emblem PrimeGarage: ikon aplikasi Android dan iOS, ikon adaptif dan ikon tema Android, ikon notifikasi, splash, favicon, ikon PWA, logo di halaman login, dan banner README. Sumber di `docs/brand`, dibangun ulang dengan `npm run generate:brand -w @prime-garage/mobile`.
 - Perintah `npm run dev:web` untuk menjalankan versi web saja saat development.
 - Login dengan GitHub di web, Android, dan Expo Go. Pertukaran OAuth di server, hanya akun di `GITHUB_ALLOWED_LOGINS` yang bisa masuk (FR-AUTH-10, ADR-012).
