@@ -91,7 +91,7 @@ Nilai penting:
 | `PORT`, `HOST` | `3000`, `127.0.0.1` |
 | `TRUST_PROXY` | `true` |
 | `DATABASE_URL` | `mysql://pg_user:<password>@127.0.0.1:3306/prime_garage` |
-| `JWT_ACCESS_SECRET` | acak minimal 32 karakter |
+| `JWT_ACCESS_SECRET` | acak minimal 32 karakter. **Wajib diganti**: nilai contoh di `.env.example` lolos validasi, jadi API tetap jalan memakai secret yang terlihat publik di repo |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | dari GitHub OAuth App (bagian 0.2) |
 | `GITHUB_ALLOWED_LOGINS` | `ahmadngiliyun00` |
 | `API_PUBLIC_URL` | `https://primegarage.ngiliyun.my.id` |
@@ -153,6 +153,12 @@ bash /www/wwwroot/primegarage.ngiliyun.my.id/scripts/deploy.sh
 
 Opsi: `--skip-web` (tidak membangun ulang web, misalnya bila RAM server kecil dan `dist` dibangun di komputer lain) dan `--no-pull` (memakai kode yang sudah ada).
 
+Jika `git pull` menolak dengan pesan `detected dubious ownership` (folder site milik user `www`, sedangkan deploy dijalankan sebagai `root`), jalankan sekali:
+
+```bash
+git config --global --add safe.directory /www/wwwroot/primegarage.ngiliyun.my.id
+```
+
 Setelah deploy pertama, buat akun login pemilik (tidak ada pendaftaran publik, ADR-011). Password diminta dua kali; perintah yang sama dipakai untuk reset password:
 
 ```bash
@@ -181,14 +187,13 @@ Sudah termasuk di `scripts/deploy.sh`. Hasilnya di `/www/wwwroot/primegarage.ngi
 
 ## 5. Nginx (aaPanel)
 
-1. aaPanel > Website > `primegarage.ngiliyun.my.id` > SSL: pasang Let's Encrypt dan aktifkan Force HTTPS.
+1. aaPanel > Website > `primegarage.ngiliyun.my.id` > SSL: pasang Let's Encrypt dan aktifkan Force HTTPS. Domain ini memakai Cloudflare: selama proxy aktif, set mode SSL/TLS di Cloudflare ke **Full (strict)**, karena mode Flexible membuat redirect loop bila Force HTTPS aktif.
 2. aaPanel > Website > `primegarage.ngiliyun.my.id` > Config. Biarkan baris buatan aaPanel (listen, SSL, log, `include`), lalu:
    - Ganti baris `root` menjadi `root /www/wwwroot/primegarage.ngiliyun.my.id/apps/mobile/dist;`
    - Tambahkan blok di bawah ini di dalam `server`, sebelum blok `location` bawaan aaPanel.
 3. Simpan. aaPanel menguji konfigurasi sebelum menerapkannya.
 
 ```nginx
-root /www/wwwroot/primegarage.ngiliyun.my.id/apps/mobile/dist;
 index index.html;
 client_max_body_size 6m;
 
@@ -342,7 +347,7 @@ npm run dev:mobile
 Mencoba dari HP (Expo Go atau development build) di Wi-Fi yang sama:
 - Set `HOST=0.0.0.0` di `apps/api/.env` agar API bisa dijangkau dari HP. Saat start, API mencetak alamat yang bisa dibuka dari HP, misalnya `http://192.168.1.10:3000/api/health`.
 - `EXPO_PUBLIC_API_URL=http://localhost:3000` boleh tetap begitu: saat development, app di HP otomatis mengganti `localhost` dengan IP komputer yang menjalankan Metro.
-- Untuk mengecek API dari browser, buka `/api/health`. Alamat `/api` sendiri memang menjawab 404.
+- Untuk mengecek API dari browser, buka `/api/health`. Alamat `/api` hanya menjawab status singkat.
 
 Atau versi web saja, lalu buka `http://localhost:8081`:
 
