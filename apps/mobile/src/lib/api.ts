@@ -129,5 +129,9 @@ function isNetworkError(e: Error): boolean {
 
 function connectionErrorMessage(): string {
   const base = `Tidak dapat terhubung ke server (${API_URL}).`;
-  return __DEV__ ? `${base} Pastikan API berjalan: npm run dev:api` : `${base} Periksa koneksi internet lalu coba lagi.`;
+  if (!__DEV__) return `${base} Periksa koneksi internet lalu coba lagi.`;
+  // In a browser a CORS rejection looks exactly like a server that is down.
+  return Platform.OS === 'web'
+    ? `${base} Pastikan API berjalan (npm run dev:api) dan alamat web ini diizinkan di CORS_ORIGINS.`
+    : `${base} Pastikan API berjalan (npm run dev:api) dengan HOST=0.0.0.0.`;
 }

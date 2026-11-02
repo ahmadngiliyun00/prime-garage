@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { networkInterfaces } from 'node:os';
 import { AppModule } from './app.module.js';
+import { corsOrigin } from './config/cors.js';
 import { env, isProduction } from './config/env.js';
 
 /** Development hint: which address a phone on the same Wi-Fi should use. */
@@ -31,7 +32,7 @@ async function bootstrap(): Promise<void> {
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
   app.use(cookieParser());
   app.enableCors({
-    origin: env.CORS_ORIGINS.length > 0 ? env.CORS_ORIGINS : false,
+    origin: corsOrigin({ allowed: env.CORS_ORIGINS, production: isProduction }),
     credentials: true,
   });
   app.useWebSocketAdapter(new IoAdapter(app));

@@ -255,7 +255,7 @@ npx eas-cli@latest submit -p android --profile production
 ## 8. Development lokal
 
 1. MySQL 8 lokal dengan database `prime_garage`.
-2. Salin `apps/api/.env.example` ke `apps/api/.env`, set `NODE_ENV=development`, `AUTH_DEV_LOGIN_ENABLED=true`, `CORS_ORIGINS=http://localhost:8081`, `STORAGE_DIR=../../storage`.
+2. Salin `apps/api/.env.example` ke `apps/api/.env`, set `NODE_ENV=development`, `AUTH_DEV_LOGIN_ENABLED=true`, `STORAGE_DIR=../../storage`. `CORS_ORIGINS` tidak perlu diubah: di luar production, origin localhost dan jaringan lokal selalu diizinkan.
 3. Salin `apps/mobile/.env.example` ke `apps/mobile/.env`.
 
 Dari root repo:

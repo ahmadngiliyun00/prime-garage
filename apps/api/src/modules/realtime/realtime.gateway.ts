@@ -7,7 +7,8 @@ import {
 } from '@nestjs/websockets';
 import { REALTIME_PATH, garageRoom, userRoom } from '@prime-garage/shared';
 import type { Server, Socket } from 'socket.io';
-import { env } from '../../config/env.js';
+import { corsOrigin } from '../../config/cors.js';
+import { env, isProduction } from '../../config/env.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TokenService } from '../auth/token.service.js';
 
@@ -17,7 +18,8 @@ import { TokenService } from '../auth/token.service.js';
  */
 @WebSocketGateway({
   path: REALTIME_PATH,
-  cors: { origin: env.CORS_ORIGINS.length ? env.CORS_ORIGINS : true, credentials: true },
+  // Same rule as the HTTP API; with no CORS_ORIGINS configured any origin may connect (auth is by token).
+  cors: { origin: env.CORS_ORIGINS.length ? corsOrigin({ allowed: env.CORS_ORIGINS, production: isProduction }) : true, credentials: true },
 })
 export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   private readonly logger = new Logger(RealtimeGateway.name);
