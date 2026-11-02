@@ -60,6 +60,11 @@ async function main(): Promise<void> {
 
   const prisma = new PrismaService();
   try {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      throw new Error('Tidak bisa terhubung ke database. Pastikan MySQL berjalan dan DATABASE_URL di apps/api/.env benar.');
+    }
     const result = await prisma.$transaction(async (tx) => {
       const byUsername = await tx.user.findUnique({ where: { username } });
       if (byUsername) {
@@ -87,6 +92,11 @@ async function main(): Promise<void> {
 }
 
 main().catch((e: unknown) => {
+  const code = (e as { code?: unknown } | null)?.code;
+  if (code === 'P2021' || code === 'P2022') {
+    console.error('Gagal: skema database belum terbaru. Jalankan dulu: npm run db:migrate -w @prime-garage/api');
+    process.exit(1);
+  }
   console.error(`Gagal: ${e instanceof Error ? e.message : String(e)}`);
   process.exit(1);
 });

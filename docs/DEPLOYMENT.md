@@ -276,6 +276,8 @@ npm run db:seed -w @prime-garage/api
 npm run dev:api
 ```
 
+Setiap selesai `git pull`, jalankan migrasi lagi (`npm run db:migrate -w @prime-garage/api`). Paket `packages/shared` dibangun ulang otomatis oleh `dev:api`, `dev:worker`, `dev:mobile`, `dev:web`, dan `user:password`.
+
 Buat akun login (password diminta lewat prompt, perintah yang sama untuk reset password):
 
 ```bash
